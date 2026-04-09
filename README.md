@@ -288,45 +288,55 @@ complete the one-time setup below.
 
 ---
 
-#### Step 3 — Authorise the Service Account in Google Workspace
+#### Step 3 — Enable Required APIs in Google Cloud
+
+In the **Google Cloud Console** for your project
+(<https://console.cloud.google.com/apis/library>), enable both:
+
+| API | Used for |
+|-----|---------|
+| **Admin SDK API** (`admin.googleapis.com`) | Directory (users, domains, OUs) and Reports |
+| **Google Workspace Alert Center API** (`alertcenter.googleapis.com`) | Alert rules (Section 6 checks) |
+
+Navigate to **APIs & Services → Library**, search for each, and click **Enable**.
+
+---
+
+#### Step 4 — Authorise the Service Account in Google Workspace
 
 1. Sign in to the **Google Workspace Admin Console**: <https://admin.google.com>
 2. Navigate to **Security → Access and data control →
    API controls → Manage Domain-wide Delegation**.
 3. Click **Add new**.
-4. Enter the **Client ID** from Step 2.
-5. In **OAuth Scopes**, add the following comma-separated scopes:
+4. Enter the **Client ID** from Step 2 (the long numeric string).
+5. In the **OAuth Scopes** field, paste the following scopes exactly
+   (comma-separated, no spaces):
 
    ```
-   https://www.googleapis.com/auth/admin.directory.user.readonly,
-   https://www.googleapis.com/auth/admin.directory.domain.readonly,
-   https://www.googleapis.com/auth/admin.directory.orgunit.readonly,
-   https://www.googleapis.com/auth/admin.reports.audit.readonly,
-   https://www.googleapis.com/auth/admin.reports.usage.readonly
+   https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.domain.readonly,https://www.googleapis.com/auth/admin.directory.orgunit.readonly,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.reports.usage.readonly,https://www.googleapis.com/auth/apps.alerts
    ```
+
+   | Scope | Purpose |
+   |-------|---------|
+   | `admin.directory.user.readonly` | Read user accounts, admin status, 2SV enrollment |
+   | `admin.directory.domain.readonly` | Read verified domains |
+   | `admin.directory.orgunit.readonly` | Read organisational units |
+   | `admin.reports.audit.readonly` | Read Admin audit logs |
+   | `admin.reports.usage.readonly` | Read usage reports |
+   | `apps.alerts` | Read Alert Center alert rules (Section 6) |
 
 6. Click **Authorise**.
 
 ---
 
-#### Step 4 — Enable Required APIs
-
-In the **Google Cloud Console** for your project, enable:
-
-- **Admin SDK API** — <https://console.cloud.google.com/apis/library/admin.googleapis.com>
-
-Navigate to **APIs & Services → Library**, search for each API, and click
-**Enable**.
-
----
-
-#### Step 5 — Record Your Domain
+#### Step 5 — Record Your Primary Domain
 
 Find your primary domain:
 
 - **Google Workspace Admin Console** → Account → Domains → Manage domains.
 
 It typically looks like `example.com`.  This is your `--domain`.
+Only verified domains are scanned for DNS checks (SPF, DKIM, DMARC).
 
 ---
 
