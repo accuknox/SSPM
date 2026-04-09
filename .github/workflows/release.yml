@@ -1,0 +1,91 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build distribution packages
+        run: python -m build
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog from git log
+        id: changelog
+        run: |
+          # Get the previous tag (if any) to bound the commit range
+          PREV_TAG=$(git tag --sort=-creatordate | grep '^v' | sed -n '2p')
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${GITHUB_REF_NAME}"
+          else
+            RANGE="${GITHUB_REF_NAME}"
+          fi
+
+          # Build a compact changelog: type(scope): subject, grouped by type
+          CHANGELOG=$(git log "$RANGE" --pretty=format:"- %s" --no-merges | head -100)
+
+          # Write to file so newlines survive the env boundary
+          {
+            echo "CHANGELOG<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "AccuKnox SSPM ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## AccuKnox SSPM ${{ github.ref_name }}
+
+            **Package:** `accuknox-sspm==${{ steps.version.outputs.version }}`
+
+            ### Installation
+
+            ```bash
+            pip install accuknox-sspm==${{ steps.version.outputs.version }}
+            ```
+
+            ### What's Changed
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ### Usage
+
+            ```bash
+            sspm scan ms365 \
+              --tenant-id  <TENANT_ID> \
+              --client-id  <CLIENT_ID> \
+              --client-secret <SECRET> \
+              --tenant-domain contoso.onmicrosoft.com
+            ```
+
+            See the [README](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md) for full setup and usage instructions.
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
