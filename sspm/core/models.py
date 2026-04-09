@@ -49,12 +49,16 @@ class Severity(str, Enum):
 
 
 class CISProfile(str, Enum):
-    """License + level profiles from the CIS MS365 benchmark."""
+    """License + level profiles from the CIS benchmarks."""
 
+    # Microsoft 365 profiles
     E3_L1 = "E3 Level 1"
     E3_L2 = "E3 Level 2"
     E5_L1 = "E5 Level 1"
     E5_L2 = "E5 Level 2"
+    # Google Workspace profiles (CIS GWS Foundations Benchmark)
+    GWS_EL1 = "Enterprise Level 1"
+    GWS_EL2 = "Enterprise Level 2"
 
 
 # ---------------------------------------------------------------------------

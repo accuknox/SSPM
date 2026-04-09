@@ -3,57 +3,12 @@
 **SaaS Security Posture Management** – automated security posture scanning for
 popular SaaS platforms against industry-standard benchmarks (CIS, NIST, etc.).
 
-Initial target: **Microsoft 365** against
-*CIS Microsoft 365 Foundations Benchmark v6.0.1*.
+Initial targets:
+- **Microsoft 365** against *CIS Microsoft 365 Foundations Benchmark v6.0.1*
+- **Google Workspace** against *CIS Google Workspace Foundations Benchmark v1.3.0*
 
 Output: **SARIF 2.1.0** JSON, compatible with GitHub Advanced Security,
 Azure DevOps, VS Code (SARIF Viewer), and any SARIF-aware toolchain.
-
----
-
-## Project Structure
-
-```
-sspm/
-├── pyproject.toml                      # Package metadata and dependencies
-├── sspm/
-│   ├── cli.py                          # Click-based CLI entry point
-│   ├── core/
-│   │   ├── models.py                   # Shared data models (Rule, Finding, ScanResult…)
-│   │   ├── engine.py                   # Scan orchestration engine
-│   │   ├── registry.py                 # Rule auto-discovery and registry
-│   │   └── reporter.py                 # SARIF 2.1.0 report generator
-│   └── providers/
-│       ├── base.py                     # Abstract BaseProvider and BaseRule
-│       └── ms365/
-│           ├── auth.py                 # MSAL client-credentials authentication
-│           ├── collector.py            # Microsoft Graph API data collection
-│           ├── provider.py             # MS365Provider (wires auth + collection)
-│           └── rules/
-│               ├── base.py             # MS365Rule base class with helpers
-│               ├── section1_m365_admin/
-│               │   ├── cis_1_1_1.py   # Admin accounts cloud-only (Automated)
-│               │   ├── cis_1_1_2.py   # Emergency access accounts (Manual)
-│               │   └── cis_1_3_1.py   # Password expiration policy (Automated)
-│               ├── section2_defender/
-│               │   └── cis_2_1_9.py   # DKIM enabled for all domains (Automated)
-│               ├── section3_purview/
-│               │   └── cis_3_1_1.py   # Audit log search enabled (Automated)
-│               ├── section5_entra/
-│               │   ├── cis_5_1_2_1.py # Per-user MFA disabled (Automated)
-│               │   ├── cis_5_2_2_1.py # MFA for admin roles via CA (Automated)
-│               │   └── cis_5_2_2_2.py # MFA for all users via CA (Automated)
-│               ├── section6_exchange/
-│               │   └── cis_6_2_1.py   # Block external mail forwarding (Automated)
-│               ├── section7_sharepoint/
-│               │   └── cis_7_2_3.py   # External content sharing restricted (Automated)
-│               └── section8_teams/
-│                   └── cis_8_5_1.py   # Anonymous meeting join disabled (Automated)
-└── tests/
-    ├── test_engine.py                  # Engine unit tests
-    ├── test_rules_ms365.py             # Rule-level unit tests
-    └── test_reporter.py                # SARIF output tests
-```
 
 ---
 
@@ -89,7 +44,7 @@ SaaS Platform ──► BaseProvider.collect() ──► CollectedData
 ### Rule Structure
 
 Every rule is a Python class that:
-1. Inherits from `MS365Rule` (which inherits `BaseRule`)
+1. Inherits from `MS365Rule` or `GWSRule` (both inherit `BaseRule`)
 2. Defines a `metadata: RuleMetadata` class attribute capturing all CIS fields
 3. Implements `async def check(self, data: CollectedData) -> Finding`
 4. Calls `@registry.rule` decorator to self-register
@@ -283,7 +238,124 @@ A response containing `"access_token"` confirms the credentials are valid.
 
 ---
 
-## Installation
+## Google Workspace Coverage
+
+The GWS provider targets *CIS Google Workspace Foundations Benchmark v1.3.0*:
+
+| Section | Area | Automated | Manual |
+|---------|------|-----------|--------|
+| 1 | Account / Admin Settings | Super admin count, 2SV enrollment & enforcement | Admin account hygiene, directory sharing |
+| 3.1.1 | Calendar | — | 6 controls |
+| 3.1.2 | Drive & Docs | — | 13 controls |
+| 3.1.3 | Gmail | SPF, DKIM, DMARC (DNS) | Attachment safety, link protection, spoofing, TLS, compliance |
+| 3.1.4 | Google Chat | — | File sharing, external access, webhooks |
+| 3.1.6 | Groups for Business | — | External access controls |
+
+### Setting Up Credentials for Scanning
+
+The scanner authenticates using a **Google Service Account** with
+**Domain-Wide Delegation (DWD)** enabled.  A **Super Administrator** must
+complete the one-time setup below.
+
+---
+
+#### Step 1 — Create a Service Account
+
+1. Go to the **Google Cloud Console**: <https://console.cloud.google.com>
+2. Select or create a project for the scanner.
+3. Navigate to **IAM & Admin → Service Accounts**.
+4. Click **Create Service Account**.
+5. Fill in the form:
+   - **Name:** `accuknox-sspm` (or any descriptive name)
+   - **Description:** `AccuKnox SSPM scanner`
+6. Click **Create and Continue**, skip optional role grants, click **Done**.
+7. Click the new service account, go to the **Keys** tab.
+8. Click **Add Key → Create new key → JSON**, then click **Create**.
+9. Save the downloaded `.json` key file securely — this is your
+   `--service-account-file`.
+
+---
+
+#### Step 2 — Enable Domain-Wide Delegation
+
+1. In the **Google Cloud Console**, open the service account.
+2. Click **Edit** (pencil icon).
+3. Expand **Advanced settings** and tick
+   **Enable Google Workspace Domain-wide Delegation**.
+4. Click **Save**.
+5. Note the **Client ID** shown on the service account overview
+   (a long numeric string) — you will need it in Step 3.
+
+---
+
+#### Step 3 — Authorise the Service Account in Google Workspace
+
+1. Sign in to the **Google Workspace Admin Console**: <https://admin.google.com>
+2. Navigate to **Security → Access and data control →
+   API controls → Manage Domain-wide Delegation**.
+3. Click **Add new**.
+4. Enter the **Client ID** from Step 2.
+5. In **OAuth Scopes**, add the following comma-separated scopes:
+
+   ```
+   https://www.googleapis.com/auth/admin.directory.user.readonly,
+   https://www.googleapis.com/auth/admin.directory.domain.readonly,
+   https://www.googleapis.com/auth/admin.directory.orgunit.readonly,
+   https://www.googleapis.com/auth/admin.reports.audit.readonly,
+   https://www.googleapis.com/auth/admin.reports.usage.readonly
+   ```
+
+6. Click **Authorise**.
+
+---
+
+#### Step 4 — Enable Required APIs
+
+In the **Google Cloud Console** for your project, enable:
+
+- **Admin SDK API** — <https://console.cloud.google.com/apis/library/admin.googleapis.com>
+
+Navigate to **APIs & Services → Library**, search for each API, and click
+**Enable**.
+
+---
+
+#### Step 5 — Record Your Domain
+
+Find your primary domain:
+
+- **Google Workspace Admin Console** → Account → Domains → Manage domains.
+
+It typically looks like `example.com`.  This is your `--domain`.
+
+---
+
+#### Summary: Values You Need
+
+| Value | Where to find it | CLI flag / env var |
+|-------|-----------------|-------------------|
+| Service Account JSON | Downloaded in Step 1 | `--service-account-file` / `SSPM_GWS_SA_FILE` |
+| Admin Email | Super Admin account email | `--admin-email` / `SSPM_GWS_ADMIN_EMAIL` |
+| Domain | Primary domain from Step 5 | `--domain` / `SSPM_GWS_DOMAIN` |
+
+---
+
+#### Security Recommendations for the Service Account
+
+- **Read-only scopes only:** the scopes listed above are all read-only.
+  Do not add any `.readonly`-less or write scopes.
+- **Dedicated project:** use a separate GCP project for the scanner to
+  isolate the service account from production workloads.
+- **Restrict key access:** store the JSON key file with `chmod 600` and
+  never commit it to version control.
+- **Rotate keys periodically:** delete and recreate the JSON key
+  annually or after any suspected exposure.
+- **Audit service account usage:** review Admin SDK audit logs for
+  unexpected access by the service account.
+
+---
+
+## Microsoft 365 Coverage
 
 ```bash
 pip install -e ".[dev]"     # development install with test dependencies
@@ -309,8 +381,17 @@ sspm scan ms365 \
   --output contoso-report.sarif.json \
   --verbose
 
-# Filter to CIS E3 Level 1 controls only
+# Scan a Google Workspace domain
+sspm scan gws \
+  --service-account-file /path/to/sa-key.json \
+  --admin-email admin@example.com \
+  --domain example.com \
+  --output gws-report.sarif.json \
+  --verbose
+
+# Filter to a specific CIS profile
 sspm scan ms365 ... --profile "E3 Level 1"
+sspm scan gws   ... --profile "Enterprise Level 1"
 
 # Run specific rules only
 sspm scan ms365 ... \
@@ -326,10 +407,17 @@ sspm report summary contoso-report.sarif.json
 
 Credentials can also be provided via environment variables:
 ```bash
+# MS365
 export SSPM_TENANT_ID=<TENANT_ID>
 export SSPM_CLIENT_ID=<CLIENT_ID>
 export SSPM_CLIENT_SECRET=<SECRET>
 sspm scan ms365 --tenant-domain contoso.onmicrosoft.com
+
+# GWS
+export SSPM_GWS_SA_FILE=/path/to/sa-key.json
+export SSPM_GWS_ADMIN_EMAIL=admin@example.com
+export SSPM_GWS_DOMAIN=example.com
+sspm scan gws
 ```
 
 ### Python API
@@ -410,8 +498,8 @@ The scanner produces a **SARIF 2.1.0** document:
 
 ## Adding New Rules
 
-1. Create a new file under `sspm/providers/ms365/rules/section<N>_<name>/cis_<x>_<y>_<z>.py`
-2. Define a class inheriting `MS365Rule`
+1. Create a new file under `sspm/providers/<provider>/rules/section<N>_<name>/cis_<x>_<y>_<z>.py`
+2. Define a class inheriting `MS365Rule` or `GWSRule`
 3. Set `metadata = RuleMetadata(...)` with all CIS fields
 4. Implement `async def check(self, data: CollectedData) -> Finding`
 5. Decorate with `@registry.rule`
@@ -420,12 +508,12 @@ The rule is auto-discovered at runtime — no manual registration needed.
 
 ```python
 from sspm.core.registry import registry
-from sspm.providers.ms365.rules.base import MS365Rule
+from sspm.providers.gws.rules.base import GWSRule  # or MS365Rule
 
 @registry.rule
-class CIS_X_Y_Z(MS365Rule):
+class CIS_X_Y_Z(GWSRule):
     metadata = RuleMetadata(
-        id="ms365-cis-X.Y.Z",
+        id="gws-cis-X.Y.Z",
         ...
     )
 

@@ -63,6 +63,90 @@ def scan() -> None:
     """Run a security posture scan against a SaaS provider."""
 
 
+@scan.command("gws")
+@click.option(
+    "--service-account-key", required=True, envvar="SSPM_GWS_SA_KEY",
+    help="Path to Google service account JSON key file.",
+)
+@click.option(
+    "--admin-email", required=True, envvar="SSPM_GWS_ADMIN_EMAIL",
+    help="Super admin email address to impersonate via domain-wide delegation.",
+)
+@click.option(
+    "--customer-domain", default="", envvar="SSPM_GWS_CUSTOMER_DOMAIN",
+    help="Primary domain of the Google Workspace organisation (e.g. example.com).",
+)
+@click.option("--profile", default=None, help='CIS profile filter: "Enterprise Level 1", "Enterprise Level 2".')
+@click.option("--rule", "rule_ids", multiple=True, help="Limit scan to specific rule IDs (repeatable).")
+@click.option(
+    "--output", "-o", default="sspm-gws-report", show_default=True,
+    help="Output file stem. Produces <stem>.html and <stem>.sarif.json.",
+)
+@click.option("--no-html", is_flag=True, default=False, help="Skip HTML report generation.")
+@click.option("--no-sarif", is_flag=True, default=False, help="Skip SARIF report generation.")
+@click.option("--verbose", "-v", is_flag=True, help="Show individual findings in the terminal.")
+def scan_gws(
+    service_account_key: str,
+    admin_email: str,
+    customer_domain: str,
+    profile: str | None,
+    rule_ids: tuple[str, ...],
+    output: str,
+    no_html: bool,
+    no_sarif: bool,
+    verbose: bool,
+) -> None:
+    """Scan a Google Workspace tenant against CIS GWS Foundations Benchmark v1.3.0."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    from sspm.core.engine import ScanEngine
+    from sspm.core.html_reporter import write_html
+    from sspm.core.reporter import write_sarif
+    from sspm.providers.gws.provider import GWSProvider
+
+    provider = GWSProvider(
+        service_account_key=service_account_key,
+        admin_email=admin_email,
+        customer_domain=customer_domain or admin_email.split("@")[-1],
+    )
+
+    engine = ScanEngine(
+        provider=provider,
+        profile_filter=profile,
+        rule_ids=list(rule_ids) if rule_ids else None,
+    )
+
+    console.print(f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (Google Workspace)")
+    if profile:
+        console.print(f"  Profile filter: [yellow]{profile}[/yellow]")
+
+    result = asyncio.run(engine.scan())
+
+    stem = output
+    for ext in (".html", ".sarif.json", ".sarif", ".json"):
+        if stem.endswith(ext):
+            stem = stem[: -len(ext)]
+            break
+
+    console.print()
+    if not no_html:
+        html_path = f"{stem}.html"
+        write_html(result, html_path)
+        console.print(f"[green]HTML  report:[/green] {html_path}")
+
+    if not no_sarif:
+        sarif_path = f"{stem}.sarif.json"
+        write_sarif(result, sarif_path)
+        console.print(f"[green]SARIF report:[/green] {sarif_path}")
+
+    _print_summary(result, verbose=verbose)
+
+    if result.failed:
+        sys.exit(1)
+
+
 @scan.command("ms365")
 @click.option("--tenant-id", required=True, envvar="SSPM_TENANT_ID", help="Entra tenant ID (GUID).")
 @click.option("--client-id", required=True, envvar="SSPM_CLIENT_ID", help="App registration client ID.")
@@ -158,10 +242,13 @@ def rules() -> None:
 @click.option("--profile", default=None, help="Filter by CIS profile.")
 def rules_list(provider: str | None, profile: str | None) -> None:
     """List all registered security rules."""
-    # Trigger auto-discovery for ms365 if no provider specified or ms365 chosen
+    # Trigger auto-discovery for known providers
     if not provider or provider == "ms365":
         from sspm.providers.ms365.provider import MS365Provider  # noqa: F401
         MS365Provider._autodiscover()
+    if not provider or provider == "gws":
+        from sspm.providers.gws.provider import GWSProvider  # noqa: F401
+        GWSProvider._autodiscover()
 
     from sspm.core.models import CISProfile
     from sspm.core.registry import registry
