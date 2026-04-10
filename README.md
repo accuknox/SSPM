@@ -247,9 +247,9 @@ The GWS provider targets *CIS Google Workspace Foundations Benchmark v1.3.0*:
 | 1 | Account / Admin Settings | Super admin count, 2SV enrollment & enforcement | Admin account hygiene, directory sharing |
 | 3.1.1 | Calendar | — | 6 controls |
 | 3.1.2 | Drive & Docs | — | 13 controls |
-| 3.1.3 | Gmail | SPF, DKIM, DMARC (DNS) | Attachment safety, link protection, spoofing, TLS, compliance |
+| 3.1.3 | Gmail | SPF, DKIM, DMARC (DNS); IMAP/POP per-user; auto-forwarding per-user | Attachment safety, link protection, spoofing, TLS, compliance |
 | 3.1.4 | Google Chat | — | File sharing, external access, webhooks |
-| 3.1.6 | Groups for Business | — | External access controls |
+| 3.1.6 | Groups for Business | Group external visibility & membership access | — |
 
 ### Setting Up Credentials for Scanning
 
@@ -313,7 +313,7 @@ Navigate to **APIs & Services → Library**, search for each, and click **Enable
    (comma-separated, no spaces):
 
    ```
-   https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.domain.readonly,https://www.googleapis.com/auth/admin.directory.orgunit.readonly,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.reports.usage.readonly,https://www.googleapis.com/auth/apps.alerts
+   https://www.googleapis.com/auth/admin.directory.user.readonly,https://www.googleapis.com/auth/admin.directory.domain.readonly,https://www.googleapis.com/auth/admin.directory.orgunit.readonly,https://www.googleapis.com/auth/admin.directory.group.readonly,https://www.googleapis.com/auth/admin.reports.audit.readonly,https://www.googleapis.com/auth/admin.reports.usage.readonly,https://www.googleapis.com/auth/apps.alerts,https://www.googleapis.com/auth/apps.groups.settings,https://www.googleapis.com/auth/gmail.settings.basic
    ```
 
    | Scope | Purpose |
@@ -321,9 +321,12 @@ Navigate to **APIs & Services → Library**, search for each, and click **Enable
    | `admin.directory.user.readonly` | Read user accounts, admin status, 2SV enrollment |
    | `admin.directory.domain.readonly` | Read verified domains |
    | `admin.directory.orgunit.readonly` | Read organisational units |
+   | `admin.directory.group.readonly` | Read all groups in the domain |
    | `admin.reports.audit.readonly` | Read Admin audit logs |
    | `admin.reports.usage.readonly` | Read usage reports |
    | `apps.alerts` | Read Alert Center alert rules (Section 6) |
+   | `apps.groups.settings` | Read group security settings (Section 3.1.6) |
+   | `gmail.settings.basic` | Read per-user IMAP, POP, forwarding settings (Section 3.1.3) |
 
 6. Click **Authorise**.
 
