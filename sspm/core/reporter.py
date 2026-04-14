@@ -92,7 +92,18 @@ def _rule_descriptor(rule_meta) -> dict[str, Any]:
     }
 
 
-def _finding_result(finding, rule_index: int) -> dict[str, Any]:
+def _target_fqn(provider: str, target: str) -> str:
+    """Return a provider-appropriate fully-qualified name for an account-level target."""
+    if provider == "aws":
+        return f"arn:aws:iam::{target}:root"
+    if provider == "ms365":
+        return f"ms365://{target}"
+    if provider == "gws":
+        return f"gws://{target}"
+    return target
+
+
+def _finding_result(finding, rule_index: int, target: str = "", provider: str = "") -> dict[str, Any]:
     """Convert Finding → SARIF result object."""
     kind = _STATUS_TO_KIND.get(finding.status, "none")
     level: str
@@ -115,19 +126,31 @@ def _finding_result(finding, rule_index: int) -> dict[str, Any]:
         message_parts.append(f"Remediation: {remediation}")
 
     # Location – use logical location (tenant / resource) rather than file URI
+    # Prefer a specific resource ARN; fall back to the account root ARN.
     locations = []
-    if finding.resource_id or finding.resource_type:
+    if finding.resource_id or finding.resource_type or target:
+        resource_type = finding.resource_type or "tenant"
+        resource_id = finding.resource_id  # specific resource ARN when available
+
+        if resource_id:
+            # Resource-specific finding: use the ARN directly as fullyQualifiedName
+            name = resource_id.split(":")[-1].split("/")[-1] if resource_id.startswith("arn:") else resource_id
+            fqn = resource_id
+        elif target:
+            # Account-level finding: use a provider-appropriate FQN as fallback
+            name = target
+            fqn = _target_fqn(provider, target)
+        else:
+            name = resource_type
+            fqn = resource_type
+
         locations.append(
             {
                 "logicalLocations": [
                     {
-                        "name": finding.resource_id or finding.rule.id,
-                        "kind": finding.resource_type or "tenant",
-                        "fullyQualifiedName": (
-                            f"{finding.resource_type}/{finding.resource_id}"
-                            if finding.resource_id
-                            else finding.resource_type
-                        ),
+                        "name": name,
+                        "kind": resource_type,
+                        "fullyQualifiedName": fqn,
                     }
                 ]
             }
@@ -178,7 +201,8 @@ def to_sarif(scan_result: ScanResult) -> dict[str, Any]:
             rule_descriptors.append(_rule_descriptor(finding.rule))
 
     results = [
-        _finding_result(f, seen_ids[f.rule.id]) for f in scan_result.findings
+        _finding_result(f, seen_ids[f.rule.id], target=scan_result.target, provider=scan_result.provider)
+        for f in scan_result.findings
     ]
 
     summary = scan_result.summary()
