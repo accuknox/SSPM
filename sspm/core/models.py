@@ -59,6 +59,9 @@ class CISProfile(str, Enum):
     # Google Workspace profiles (CIS GWS Foundations Benchmark)
     GWS_EL1 = "Enterprise Level 1"
     GWS_EL2 = "Enterprise Level 2"
+    # AWS profiles (CIS AWS Foundations Benchmark)
+    AWS_L1 = "AWS Level 1"
+    AWS_L2 = "AWS Level 2"
 
 
 # ---------------------------------------------------------------------------

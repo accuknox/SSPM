@@ -210,6 +210,9 @@ def to_sarif(scan_result: ScanResult) -> dict[str, Any]:
                             "target": scan_result.target,
                             "scanId": scan_result.scan_id,
                         },
+                        "workingDirectory": {
+                            "uri": scan_result.target,
+                        }
                     }
                 ],
                 "results": results,

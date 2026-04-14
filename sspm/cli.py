@@ -147,6 +147,95 @@ def scan_gws(
         sys.exit(1)
 
 
+@scan.command("aws")
+@click.option("--access-key-id", default=None, envvar="AWS_ACCESS_KEY_ID",
+              help="AWS access key ID. If omitted, uses the standard credential chain.")
+@click.option("--secret-access-key", default=None, envvar="AWS_SECRET_ACCESS_KEY",
+              help="AWS secret access key.")
+@click.option("--session-token", default=None, envvar="AWS_SESSION_TOKEN",
+              help="AWS STS session token (for temporary credentials).")
+@click.option("--profile", "aws_profile", default=None, envvar="AWS_PROFILE",
+              help="Named AWS CLI profile (~/.aws/credentials).")
+@click.option("--region", default="us-east-1", show_default=True, envvar="AWS_DEFAULT_REGION",
+              help="Home region for global API calls.")
+@click.option("--account-alias", default="", envvar="SSPM_AWS_ACCOUNT_ALIAS",
+              help="Human-readable label for the account (defaults to account ID).")
+@click.option("--profile-filter", "profile_filter", default=None,
+              help='CIS profile filter: "AWS Level 1" or "AWS Level 2".')
+@click.option("--rule", "rule_ids", multiple=True, help="Limit scan to specific rule IDs (repeatable).")
+@click.option("--output", "-o", default="sspm-aws-report", show_default=True,
+              help="Output file stem. Produces <stem>.html and <stem>.sarif.json.")
+@click.option("--no-html", is_flag=True, default=False, help="Skip HTML report generation.")
+@click.option("--no-sarif", is_flag=True, default=False, help="Skip SARIF report generation.")
+@click.option("--verbose", "-v", is_flag=True, help="Show individual findings in the terminal.")
+def scan_aws(
+    access_key_id: str | None,
+    secret_access_key: str | None,
+    session_token: str | None,
+    aws_profile: str | None,
+    region: str,
+    account_alias: str,
+    profile_filter: str | None,
+    rule_ids: tuple[str, ...],
+    output: str,
+    no_html: bool,
+    no_sarif: bool,
+    verbose: bool,
+) -> None:
+    """Scan an AWS account against CIS AWS Foundations Benchmark v1.2.0."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    from sspm.core.engine import ScanEngine
+    from sspm.core.html_reporter import write_html
+    from sspm.core.reporter import write_sarif
+    from sspm.providers.aws.provider import AWSProvider
+
+    provider = AWSProvider(
+        access_key_id=access_key_id or None,
+        secret_access_key=secret_access_key or None,
+        session_token=session_token or None,
+        profile_name=aws_profile or None,
+        region_name=region,
+        account_alias=account_alias,
+    )
+
+    engine = ScanEngine(
+        provider=provider,
+        profile_filter=profile_filter,
+        rule_ids=list(rule_ids) if rule_ids else None,
+    )
+
+    console.print(f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (AWS)")
+    if profile_filter:
+        console.print(f"  Profile filter: [yellow]{profile_filter}[/yellow]")
+
+    result = asyncio.run(engine.scan())
+
+    stem = output
+    for ext in (".html", ".sarif.json", ".sarif", ".json"):
+        if stem.endswith(ext):
+            stem = stem[: -len(ext)]
+            break
+
+    console.print()
+    if not no_html:
+        html_path = f"{stem}.html"
+        write_html(result, html_path)
+        console.print(f"[green]HTML  report:[/green] {html_path}")
+
+    if not no_sarif:
+        sarif_path = f"{stem}.sarif.json"
+        write_sarif(result, sarif_path)
+        console.print(f"[green]SARIF report:[/green] {sarif_path}")
+
+    _print_summary(result, verbose=verbose)
+
+    if result.failed:
+        sys.exit(1)
+
+
 @scan.command("ms365")
 @click.option("--tenant-id", required=True, envvar="SSPM_TENANT_ID", help="Entra tenant ID (GUID).")
 @click.option("--client-id", required=True, envvar="SSPM_CLIENT_ID", help="App registration client ID.")
@@ -249,6 +338,9 @@ def rules_list(provider: str | None, profile: str | None) -> None:
     if not provider or provider == "gws":
         from sspm.providers.gws.provider import GWSProvider  # noqa: F401
         GWSProvider._autodiscover()
+    if not provider or provider == "aws":
+        from sspm.providers.aws.provider import AWSProvider  # noqa: F401
+        AWSProvider._autodiscover()
 
     from sspm.core.models import CISProfile
     from sspm.core.registry import registry
