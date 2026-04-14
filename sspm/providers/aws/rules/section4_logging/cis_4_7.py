@@ -1,7 +1,7 @@
 """CIS AWS 4.7 – Ensure VPC flow logging is enabled in all VPCs (Automated, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -41,6 +41,12 @@ class CIS_4_7(AWSRule):
         default_value="VPC flow logging is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="8.2", title="Collect Audit Logs", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="13.6", title="Collect Network Traffic Flow Logs", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="12.5", title="Configure Monitoring Systems to Record Network Packets", ig1=False, ig2=True, ig3=True),
         ],
     )
 

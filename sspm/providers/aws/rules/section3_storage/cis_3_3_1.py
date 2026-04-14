@@ -1,7 +1,7 @@
 """CIS AWS 3.3.1 – Ensure that encryption is enabled for EFS file systems (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,10 @@ class CIS_3_3_1(AWSRule):
         default_value="EFS file systems are not encrypted by default unless specified.",
         references=[
             "https://docs.aws.amazon.com/efs/latest/ug/encryption-at-rest.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.11", title="Encrypt Sensitive Data at Rest", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.8", title="Encrypt Sensitive Information at Rest", ig1=False, ig2=False, ig3=True),
         ],
     )
 

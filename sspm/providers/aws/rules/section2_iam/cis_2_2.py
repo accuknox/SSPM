@@ -1,7 +1,7 @@
 """CIS AWS 2.2 – Maintain current AWS account contact details (Manual, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -45,6 +45,13 @@ class CIS_2_2(AWSRule):
         default_value="Contact details are provided during account creation but may become stale.",
         references=[
             "https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="17.2", title="Establish and Maintain Contact Information for Reporting Security Incidents", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="17.6", title="Define Mechanisms for Communicating During Incident Response", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="19", title="Incident Response and Management", ig1=False, ig2=False, ig3=False),
+            CISControl(version="v7", control_id="19.2", title="Follow Documented Incident Response Procedures", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="19.3", title="Designate Management Personnel to Support Incident Handling", ig1=True, ig2=True, ig3=True),
         ],
     )
 

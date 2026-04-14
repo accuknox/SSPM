@@ -10,7 +10,7 @@ Rule 5.16 checks that AWS Security Hub is enabled.
 """
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -29,6 +29,7 @@ def _monitoring_rule(
     rule_description: str,
     severity: Severity = Severity.MEDIUM,
     profiles: list | None = None,
+    cis_controls: list | None = None,
 ) -> type:
     _profiles = profiles if profiles is not None else _PROFILES_L1
 
@@ -61,6 +62,7 @@ def _monitoring_rule(
                 "4. Set the alarm action to the SNS topic ARN."
             ),
             default_value="No metric filters or alarms are created by default.",
+            cis_controls=cis_controls or [],
         )
 
         _filter_keywords = filter_keywords
@@ -88,6 +90,13 @@ _monitoring_rule(
     rule_description="unauthorized API calls",
     severity=Severity.HIGH,
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.5", title="Central Log Management", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.7", title="Manage and Review Audit Logs", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -103,6 +112,11 @@ _monitoring_rule(
     filter_keywords=["ConsoleLogin", "MFAUsed"],
     rule_description="Management Console sign-in without MFA",
     severity=Severity.HIGH,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -118,6 +132,12 @@ _monitoring_rule(
     filter_keywords=["userIdentity.type", "Root"],
     rule_description="root account usage",
     severity=Severity.CRITICAL,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="4.9", title="Log and Alert on Changes to Administrative Group Membership", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -132,6 +152,11 @@ _monitoring_rule(
     ),
     filter_keywords=["DeleteGroupPolicy", "PutGroupPolicy", "PutUserPolicy", "PutRolePolicy"],
     rule_description="IAM policy changes",
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -147,6 +172,11 @@ _monitoring_rule(
     filter_keywords=["CreateTrail", "DeleteTrail", "UpdateTrail", "StopLogging"],
     rule_description="CloudTrail configuration changes",
     severity=Severity.HIGH,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -162,6 +192,12 @@ _monitoring_rule(
     filter_keywords=["ConsoleLogin", "Failed authentication"],
     rule_description="Management Console authentication failures",
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="4.9", title="Log and Alert on Changes to Administrative Group Membership", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -178,6 +214,11 @@ _monitoring_rule(
     rule_description="CMK disabling or scheduled deletion",
     severity=Severity.HIGH,
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -192,6 +233,12 @@ _monitoring_rule(
     ),
     filter_keywords=["PutBucketPolicy", "DeleteBucketPolicy", "PutBucketAcl"],
     rule_description="S3 bucket policy changes",
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -207,6 +254,12 @@ _monitoring_rule(
     filter_keywords=["StopConfigurationRecorder", "DeleteDeliveryChannel", "PutDeliveryChannel"],
     rule_description="AWS Config configuration changes",
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="11.2", title="Document Traffic Configuration Rules", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -222,6 +275,14 @@ _monitoring_rule(
     filter_keywords=["AuthorizeSecurityGroupIngress", "CreateSecurityGroup", "DeleteSecurityGroup"],
     rule_description="security group changes",
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="3.3", title="Configure Data Access Control Lists", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="14.6", title="Protect Information through Access Control Lists", ig1=True, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -237,6 +298,12 @@ _monitoring_rule(
     filter_keywords=["CreateNetworkAcl", "DeleteNetworkAcl", "ReplaceNetworkAclEntry"],
     rule_description="NACL changes",
     profiles=_PROFILES_L2,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="11.3", title="Use Automated Tools to Verify Standard Device Configurations and Detect Changes", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -251,6 +318,12 @@ _monitoring_rule(
     ),
     filter_keywords=["CreateCustomerGateway", "DeleteCustomerGateway", "AttachInternetGateway"],
     rule_description="network gateway changes",
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -265,6 +338,12 @@ _monitoring_rule(
     ),
     filter_keywords=["CreateRoute", "DeleteRoute", "ReplaceRoute", "DeleteRouteTable"],
     rule_description="route table changes",
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -279,6 +358,12 @@ _monitoring_rule(
     ),
     filter_keywords=["CreateVpc", "DeleteVpc", "ModifyVpcAttribute", "AcceptVpcPeeringConnection"],
     rule_description="VPC changes",
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="5.5", title="Implement Automated Configuration Monitoring Systems", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+    ],
 )
 
 # ---------------------------------------------------------------------------
@@ -295,6 +380,13 @@ _monitoring_rule(
     filter_keywords=["organizations.amazonaws.com"],
     rule_description="AWS Organizations changes",
     severity=Severity.HIGH,
+    cis_controls=[
+        CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
+        CISControl(version="v7", control_id="14.6", title="Protect Information through Access Control Lists", ig1=True, ig2=True, ig3=True),
+    ],
 )
 
 
@@ -334,6 +426,10 @@ class CIS_5_16(AWSRule):
         default_value="Security Hub is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="7.1", title="Establish and Maintain a Vulnerability Management Process", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="11.3", title="Use Automated Tools to Verify Standard Device Configurations and Detect Changes", ig1=False, ig2=True, ig3=True),
         ],
     )
 

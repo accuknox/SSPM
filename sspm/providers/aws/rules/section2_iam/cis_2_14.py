@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -67,6 +67,10 @@ class CIS_2_14(AWSRule):
         default_value="No policies are created or attached by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html#grant-least-privilege"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=False, ig3=True),
+            CISControl(version="v7", control_id="4.1", title="Maintain Inventory of Administrative Accounts", ig1=False, ig2=True, ig3=True),
         ],
     )
 

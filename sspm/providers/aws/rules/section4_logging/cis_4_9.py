@@ -1,7 +1,7 @@
 """CIS AWS 4.9 – Ensure that object-level logging for read events is enabled for S3 buckets (Automated, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -64,6 +64,10 @@ class CIS_4_9(AWSRule):
         default_value="S3 data event logging is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/logging-data-events-with-cloudtrail.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="6.3", title="Enable Detailed Logging", ig1=False, ig2=True, ig3=True),
         ],
     )
 

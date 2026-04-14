@@ -1,7 +1,7 @@
 """CIS AWS 3.2.2 – Ensure the Auto Minor Version Upgrade feature is enabled for RDS instances (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -42,6 +42,10 @@ class CIS_3_2_2(AWSRule):
         default_value="Auto Minor Version Upgrade is enabled by default for new RDS instances.",
         references=[
             "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.Upgrading.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="7.4", title="Perform Automated Application Patch Management", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="3.5", title="Securely Dispose of Data", ig1=True, ig2=True, ig3=True),
         ],
     )
 

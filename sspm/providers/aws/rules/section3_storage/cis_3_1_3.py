@@ -1,7 +1,7 @@
 """CIS AWS 3.1.3 – Ensure all data in Amazon S3 has been discovered, classified, and secured (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -47,6 +47,10 @@ class CIS_3_1_3(AWSRule):
         default_value="No data classification is performed by default.",
         references=[
             "https://docs.aws.amazon.com/macie/latest/user/what-is-macie.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.1", title="Establish and Maintain a Data Management Process", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="5.1", title="Establish Secure Configurations", ig1=True, ig2=True, ig3=True),
         ],
     )
 

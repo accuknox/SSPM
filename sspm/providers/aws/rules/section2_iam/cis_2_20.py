@@ -1,7 +1,7 @@
 """CIS AWS 2.20 – Ensure access to AWSCloudShellFullAccess is restricted (Manual, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -48,6 +48,10 @@ class CIS_2_20(AWSRule):
         default_value="AWSCloudShellFullAccess is not attached to any entity by default.",
         references=[
             "https://docs.aws.amazon.com/cloudshell/latest/userguide/sec-auth-with-identities.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.1", title="Establish an Access Granting Process", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.1", title="Segment the Network Based on Sensitivity", ig1=False, ig2=True, ig3=True),
         ],
     )
 

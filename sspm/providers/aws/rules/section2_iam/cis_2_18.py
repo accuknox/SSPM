@@ -1,7 +1,7 @@
 """CIS AWS 2.18 – Ensure that IAM Access Analyzer is enabled for all regions (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -41,6 +41,10 @@ class CIS_2_18(AWSRule):
         default_value="IAM Access Analyzer is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.3", title="Configure Data Access Control Lists", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.6", title="Protect Information through Access Control Lists", ig1=True, ig2=True, ig3=True),
         ],
     )
 

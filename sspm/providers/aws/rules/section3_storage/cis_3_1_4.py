@@ -1,7 +1,7 @@
 """CIS AWS 3.1.4 – Ensure that S3 is configured with 'Block Public Access' enabled (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -45,6 +45,10 @@ class CIS_3_1_4(AWSRule):
         default_value="Block Public Access is not enabled by default for new accounts (enabled since April 2023 for new accounts).",
         references=[
             "https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-control-block-public-access.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.3", title="Configure Data Access Control Lists", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.6", title="Protect Information through Access Control Lists", ig1=True, ig2=True, ig3=True),
         ],
     )
 

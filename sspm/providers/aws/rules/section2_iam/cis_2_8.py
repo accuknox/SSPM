@@ -1,7 +1,7 @@
 """CIS AWS 2.8 – Ensure IAM password policy requires minimum length of 14 or greater (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -42,6 +42,10 @@ class CIS_2_8(AWSRule):
         default_value="No password policy is set by default; AWS minimum is 8 characters.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.2", title="Use Unique Passwords", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="16.1", title="Maintain an Inventory of Authentication Systems", ig1=False, ig2=True, ig3=True),
         ],
     )
 

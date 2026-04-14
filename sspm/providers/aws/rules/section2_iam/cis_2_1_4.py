@@ -1,7 +1,7 @@
 """CIS AWS 2.1.4 – Ensure Organizational Units are structured by environment and sensitivity (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -42,6 +42,9 @@ class CIS_2_1_4(AWSRule):
         default_value="AWS Organizations does not enforce any particular OU structure.",
         references=[
             "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_best-practices_ou-structure.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.12", title="Segment Data Processing and Storage Based on Sensitivity", ig1=False, ig2=True, ig3=True),
         ],
     )
 

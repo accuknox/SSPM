@@ -1,7 +1,7 @@
 """CIS AWS 2.1.2 – Ensure authorization guardrails for all AWS Organization accounts (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -45,6 +45,10 @@ class CIS_2_1_2(AWSRule):
         default_value="No SCPs or RCPs are attached to accounts by default.",
         references=[
             "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.6", title="Centralize Account Management", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="6.7", title="Centralize Access Control", ig1=False, ig2=True, ig3=True),
         ],
     )
 

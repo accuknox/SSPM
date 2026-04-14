@@ -1,7 +1,7 @@
 """CIS AWS 3.1.1 – Ensure S3 Bucket Policy is set to deny HTTP requests (Automated, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -60,6 +60,10 @@ class CIS_3_1_1(AWSRule):
         default_value="S3 bucket policies do not enforce HTTPS by default.",
         references=[
             "https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.10", title="Encrypt Sensitive Data in Transit", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.4", title="Encrypt All Sensitive Information in Transit", ig1=False, ig2=True, ig3=True),
         ],
     )
 

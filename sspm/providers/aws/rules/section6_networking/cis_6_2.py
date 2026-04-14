@@ -1,7 +1,7 @@
 """CIS AWS 6.2 – Ensure no NACLs allow ingress from 0.0.0.0/0 to remote server administration ports (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -72,6 +72,10 @@ class CIS_6_2(AWSRule):
         default_value="Default NACLs allow all inbound and outbound traffic.",
         references=[
             "https://docs.aws.amazon.com/vpc/latest/userguide/vpc-network-acls.html"
+        ],
+        cis_controls=[
+            CISControl(version="v7", control_id="9.2", title="Ensure Only Approved Ports, Protocols and Services Are Running", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="12.4", title="Deny Communication over Unauthorized Ports", ig1=True, ig2=True, ig3=True),
         ],
     )
 

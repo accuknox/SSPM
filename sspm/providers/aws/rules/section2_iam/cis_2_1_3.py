@@ -1,7 +1,7 @@
 """CIS AWS 2.1.3 – Ensure Organizations management account is not used for workloads (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,9 @@ class CIS_2_1_3(AWSRule):
         default_value="The management account can host workloads by default.",
         references=[
             "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_best-practices_mgmt-acct.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.12", title="Segment Data Processing and Storage Based on Sensitivity", ig1=False, ig2=True, ig3=True),
         ],
     )
 

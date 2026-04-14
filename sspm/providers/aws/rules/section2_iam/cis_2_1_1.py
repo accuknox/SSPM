@@ -1,7 +1,7 @@
 """CIS AWS 2.1.1 – Ensure centralized root access in AWS Organizations (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,11 @@ class CIS_2_1_1(AWSRule):
         default_value="Centralized root access management is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_root-enable-root-access.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.4", title="Restrict Administrator Privileges to Dedicated Administrator Accounts", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="5.6", title="Centralize Account Management", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="6.7", title="Centralize Access Control", ig1=False, ig2=True, ig3=True),
         ],
     )
 

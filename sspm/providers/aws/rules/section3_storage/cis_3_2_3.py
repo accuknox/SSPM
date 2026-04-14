@@ -1,7 +1,7 @@
 """CIS AWS 3.2.3 – Ensure that RDS instances are not publicly accessible (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -42,6 +42,10 @@ class CIS_3_2_3(AWSRule):
         default_value="RDS instances may be publicly accessible depending on creation settings.",
         references=[
             "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Overview.DBInstance.Modifying.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.3", title="Configure Data Access Control Lists", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="14.6", title="Protect Information through Access Control Lists", ig1=True, ig2=True, ig3=True),
         ],
     )
 

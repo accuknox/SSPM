@@ -1,7 +1,7 @@
 """CIS AWS 2.3 – Ensure security contact information is registered (Manual, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -46,6 +46,9 @@ class CIS_2_3(AWSRule):
         default_value="No security contact is registered by default.",
         references=[
             "https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-update-contact.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="17.2", title="Establish and Maintain Contact Information for Reporting Security Incidents", ig1=True, ig2=True, ig3=True),
         ],
     )
 

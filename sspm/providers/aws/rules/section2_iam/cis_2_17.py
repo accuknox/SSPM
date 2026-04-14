@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -42,6 +42,10 @@ class CIS_2_17(AWSRule):
         default_value="No SSL/TLS certificates are stored in IAM by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_server-certs.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="3.1", title="Establish and Maintain a Data Management Process", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="13.1", title="Maintain an Inventory of Sensitive Information", ig1=True, ig2=True, ig3=True),
         ],
     )
 

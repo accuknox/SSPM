@@ -1,7 +1,7 @@
 """CIS AWS 4.2 – Ensure CloudTrail log file validation is enabled (Automated, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -39,6 +39,10 @@ class CIS_4_2(AWSRule):
         default_value="Log file validation is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-log-file-validation-intro.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="8.11", title="Conduct Audit Log Reviews", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="6.1", title="Utilize Three Synchronized Time Sources", ig1=False, ig2=True, ig3=True),
         ],
     )
 

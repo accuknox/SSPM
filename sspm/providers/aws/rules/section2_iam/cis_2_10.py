@@ -1,7 +1,7 @@
 """CIS AWS 2.10 – Ensure MFA is enabled for all IAM users with a console password (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,10 @@ class CIS_2_10(AWSRule):
         default_value="MFA is not enabled for IAM users by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.5", title="Require MFA for Administrative Access", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="4.5", title="Use Multifactor Authentication for All Administrative Access", ig1=False, ig2=True, ig3=True),
         ],
     )
 

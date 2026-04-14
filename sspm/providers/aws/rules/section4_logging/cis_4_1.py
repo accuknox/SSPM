@@ -1,7 +1,7 @@
 """CIS AWS 4.1 – Ensure CloudTrail is enabled in all regions (Manual, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,10 @@ class CIS_4_1(AWSRule):
         default_value="CloudTrail is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-getting-started.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="8.5", title="Collect Detailed Audit Logs", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="6.2", title="Activate Audit Logging", ig1=True, ig2=True, ig3=True),
         ],
     )
 

@@ -1,7 +1,7 @@
 """CIS AWS 3.2.4 – Ensure Multi-AZ deployments are used for enhanced availability in Amazon RDS (Manual, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -43,6 +43,10 @@ class CIS_3_2_4(AWSRule):
         default_value="Multi-AZ is not enabled by default.",
         references=[
             "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZ.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="12.2", title="Establish and Maintain a Secure Network Architecture", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="2.10", title="Disable Unnecessary or Unauthorized Software", ig1=False, ig2=False, ig3=True),
         ],
     )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -56,6 +56,10 @@ class CIS_2_11(AWSRule):
         default_value="Credentials are active until manually disabled.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_finding-unused.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.3", title="Disable Dormant Accounts", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="16.9", title="Disable Dormant Accounts", ig1=True, ig2=True, ig3=True),
         ],
     )
 

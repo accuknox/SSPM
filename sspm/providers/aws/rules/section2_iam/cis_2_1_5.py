@@ -1,7 +1,7 @@
 """CIS AWS 2.1.5 – Ensure delegated admin manages AWS Organizations policies (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -46,6 +46,10 @@ class CIS_2_1_5(AWSRule):
         default_value="No delegated administrators are configured by default.",
         references=[
             "https://docs.aws.amazon.com/organizations/latest/userguide/orgs_delegate_policies.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.4", title="Restrict Administrator Privileges to Dedicated Administrator Accounts", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=False, ig3=True),
         ],
     )
 

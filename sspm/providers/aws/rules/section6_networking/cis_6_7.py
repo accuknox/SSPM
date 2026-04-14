@@ -1,7 +1,7 @@
 """CIS AWS 6.7 – Ensure that EC2 Metadata Service only allows IMDSv2 (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -44,6 +44,10 @@ class CIS_6_7(AWSRule):
         default_value="IMDSv1 is enabled by default (HttpTokens=optional) for older instances.",
         references=[
             "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="4.8", title="Uninstall or Disable Unnecessary Services on Assets", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="5.2", title="Maintain Secure Images", ig1=False, ig2=True, ig3=True),
         ],
     )
 

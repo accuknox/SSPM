@@ -1,7 +1,7 @@
 """CIS AWS 2.19 – Ensure IAM users are managed centrally via identity federation or AWS Organizations (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -49,6 +49,10 @@ class CIS_2_19(AWSRule):
         default_value="IAM users are local to each AWS account by default.",
         references=[
             "https://docs.aws.amazon.com/singlesignon/latest/userguide/what-is.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.6", title="Centralize Account Management", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="16.2", title="Configure Centralized Point of Authentication", ig1=False, ig2=True, ig3=True),
         ],
     )
 

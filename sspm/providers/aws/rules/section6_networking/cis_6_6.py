@@ -1,7 +1,7 @@
 """CIS AWS 6.6 – Ensure routing tables for VPC peering are 'least access' (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -48,6 +48,10 @@ class CIS_6_6(AWSRule):
         default_value="Route tables do not have peering routes by default.",
         references=[
             "https://docs.aws.amazon.com/vpc/latest/peering/vpc-peering-routing.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="13.4", title="Perform Traffic Filtering Between Network Segments", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="9.2", title="Ensure Only Approved Ports, Protocols and Services Are Running", ig1=False, ig2=True, ig3=True),
         ],
     )
 

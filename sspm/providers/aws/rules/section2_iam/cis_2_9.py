@@ -1,7 +1,7 @@
 """CIS AWS 2.9 – Ensure IAM password policy prevents password reuse (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -38,6 +38,10 @@ class CIS_2_9(AWSRule):
         default_value="No password reuse prevention is configured by default.",
         references=[
             "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_passwords_account-policy.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="5.2", title="Use Unique Passwords", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="4.4", title="Use Unique Passwords", ig1=False, ig2=True, ig3=True),
         ],
     )
 

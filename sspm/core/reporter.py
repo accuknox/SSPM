@@ -20,8 +20,8 @@ from typing import Any
 from sspm.core.models import FindingStatus, ScanResult, Severity
 
 _SARIF_SCHEMA = (
-    "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/"
-    "Schemata/sarif-schema-2.1.0.json"
+    "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/"
+    "sarif-2.1/schema/sarif-schema-2.1.0.json"
 )
 
 _SEVERITY_TO_LEVEL: dict[str, str] = {
@@ -93,7 +93,7 @@ def _rule_descriptor(rule_meta) -> dict[str, Any]:
 
 
 def _target_fqn(provider: str, target: str) -> str:
-    """Return a provider-appropriate fully-qualified name for an account-level target."""
+    """Return a provider-appropriate fully-qualified name for a tenant/account-level target."""
     if provider == "aws":
         return f"arn:aws:iam::{target}:root"
     if provider == "ms365":
@@ -126,15 +126,21 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
         message_parts.append(f"Remediation: {remediation}")
 
     # Location – use logical location (tenant / resource) rather than file URI
-    # Prefer a specific resource ARN; fall back to the account root ARN.
+    # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
     locations = []
     if finding.resource_id or finding.resource_type or target:
         resource_type = finding.resource_type or "tenant"
-        resource_id = finding.resource_id  # specific resource ARN when available
+        resource_id = finding.resource_id  # specific resource ID when available
 
         if resource_id:
-            # Resource-specific finding: use the ARN directly as fullyQualifiedName
-            name = resource_id.split(":")[-1].split("/")[-1] if resource_id.startswith("arn:") else resource_id
+            # Resource-specific finding: use the resource ID directly as fullyQualifiedName.
+            # For AWS ARNs, extract a human-readable short name from the last path/colon segment,
+            # skipping wildcard suffixes like ":*".
+            if resource_id.startswith("arn:"):
+                parts = [p for p in resource_id.split(":") if p and p != "*"]
+                name = parts[-1].split("/")[-1] if parts else resource_id
+            else:
+                name = resource_id
             fqn = resource_id
         elif target:
             # Account-level finding: use a provider-appropriate FQN as fallback

@@ -1,7 +1,7 @@
 """CIS AWS 6.4 – Ensure no security groups allow ingress from ::/0 to remote server administration ports (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, Evidence, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -61,6 +61,10 @@ class CIS_6_4(AWSRule):
         default_value="Security groups are not created by default.",
         references=[
             "https://docs.aws.amazon.com/vpc/latest/userguide/security-group-rules.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="4.5", title="Implement and Manage a Firewall on End-User Devices", ig1=True, ig2=True, ig3=True),
+            CISControl(version="v7", control_id="9.4", title="Apply Host-Based Firewalls or Port-Filtering", ig1=True, ig2=True, ig3=True),
         ],
     )
 

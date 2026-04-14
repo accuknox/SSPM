@@ -1,7 +1,7 @@
 """CIS AWS 6.8 – Ensure VPC Endpoints are used for access to AWS Services (Manual, L2)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.aws.rules.base import AWSRule
 from sspm.providers.base import CollectedData
@@ -46,6 +46,9 @@ class CIS_6_8(AWSRule):
         default_value="No VPC Endpoints are created by default.",
         references=[
             "https://docs.aws.amazon.com/vpc/latest/privatelink/vpc-endpoints.html"
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="12.2", title="Establish and Maintain a Secure Network Architecture", ig1=False, ig2=True, ig3=True),
         ],
     )
 
