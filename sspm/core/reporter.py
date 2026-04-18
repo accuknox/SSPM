@@ -87,6 +87,8 @@ def _rule_descriptor(rule_meta) -> dict[str, Any]:
             "defaultValue": rule_meta.default_value,
             "cisControls": cis_controls,
             "tags": rule_meta.tags,
+            "audit": rule_meta.audit_procedure,
+            "remediation": rule_meta.remediation,
         },
         "helpUri": rule_meta.references[0] if rule_meta.references else "",
     }
@@ -121,9 +123,6 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
             "This control requires manual verification. "
             "See auditProcedure in rule properties."
         )
-    remediation = finding.remediation_guidance or finding.rule.remediation
-    if finding.status == FindingStatus.FAIL and remediation:
-        message_parts.append(f"Remediation: {remediation}")
 
     # Location – use logical location (tenant / resource) rather than file URI
     # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
