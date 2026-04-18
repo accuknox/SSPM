@@ -90,16 +90,7 @@ class CIS_3_1_3_5_2(GWSRule):
         forwarding_users: list | None = data.get("gmail_forwarding_enabled")
 
         if forwarding_users is None:
-            return self._manual(
-                "Gmail per-user forwarding settings could not be collected.  "
-                "Ensure the 'gmail.settings.basic' scope is authorised in "
-                "Domain-wide Delegation, then re-run the scan.\n\n"
-                "Manual verification:\n"
-                "  1. Log in to https://admin.google.com\n"
-                "  2. Select Apps → Google Workspace → Gmail → End User Access\n"
-                "  3. Ensure 'Allow users to automatically forward incoming email "
-                "to another address' is unchecked"
-            )
+            return self._manual()
 
         if not forwarding_users:
             total = len(data.get("users") or [])

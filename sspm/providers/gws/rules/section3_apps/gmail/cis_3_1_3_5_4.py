@@ -82,11 +82,4 @@ class CIS_3_1_3_5_4(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external recipient warnings are enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select End User Access\n"
-            "  4. Ensure 'Highlight any external recipients in a compose or "
-            "reply window' is ON"
-        )
+        return self._manual()

@@ -81,10 +81,4 @@ class CIS_3_1_4_1_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external file sharing in Google Chat is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Chat and classic Hangouts\n"
-            "  3. Select Chat File Sharing → Setting\n"
-            "  4. Ensure 'External filesharing' is set to 'No files'"
-        )
+        return self._manual()

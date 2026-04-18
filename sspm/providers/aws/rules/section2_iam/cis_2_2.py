@@ -56,8 +56,4 @@ class CIS_2_2(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that the AWS account contact details are current and accurate via the "
-            "AWS Management Console: Account → Contact Information. Ensure the name, email, "
-            "phone number, and address are up to date."
-        )
+        return self._manual()

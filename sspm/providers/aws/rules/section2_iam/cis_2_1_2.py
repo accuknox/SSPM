@@ -53,8 +53,4 @@ class CIS_2_1_2(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify via AWS CLI or Console: aws organizations list-policies --filter "
-            "SERVICE_CONTROL_POLICY and confirm policies are attached to all accounts/OUs. "
-            "Also check for Resource Control Policies (RCPs)."
-        )
+        return self._manual()

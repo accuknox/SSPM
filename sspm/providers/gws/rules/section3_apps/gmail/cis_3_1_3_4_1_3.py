@@ -74,11 +74,4 @@ class CIS_3_1_3_4_1_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify protection against anomalous attachment types:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under Safety → Attachments\n"
-            "  4. Ensure 'Protect against anomalous attachment types in emails' "
-            "is checked"
-        )
+        return self._manual()

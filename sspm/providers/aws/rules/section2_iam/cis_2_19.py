@@ -57,9 +57,4 @@ class CIS_2_19(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that identity federation (IAM Identity Center/SSO or SAML federation) is "
-            "configured for centralized user management. Check: aws sso-admin list-instances "
-            "and aws iam list-saml-providers. Confirm that most console and API access is "
-            "via federated identities rather than local IAM users."
-        )
+        return self._manual()

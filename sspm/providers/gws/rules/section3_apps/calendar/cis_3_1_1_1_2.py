@@ -80,10 +80,4 @@ class CIS_3_1_1_1_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify internal calendar sharing for primary calendars:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Calendar\n"
-            "  3. Under Sharing settings → Internal sharing options for primary calendars\n"
-            "  4. Ensure 'Only free/busy information (hide event details)' is selected"
-        )
+        return self._manual()

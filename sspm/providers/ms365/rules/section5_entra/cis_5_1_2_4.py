@@ -71,10 +71,4 @@ class CIS_5_1_2_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Entra admin portal access restriction:\n"
-            "  1. Go to https://entra.microsoft.com\n"
-            "  2. Navigate to Identity > Users > User settings\n"
-            "  3. Verify 'Restrict access to Microsoft Entra admin center' is enabled\n\n"
-            "This setting cannot be verified via Microsoft Graph API."
-        )
+        return self._manual()

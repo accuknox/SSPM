@@ -116,13 +116,18 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
     else:
         level = "none"
 
-    # Build the message text
-    message_parts = [finding.message or finding.rule.title]
+    # Build the message
+    base_message = finding.message or finding.rule.title
+    description = base_message
     if finding.status == FindingStatus.MANUAL:
-        message_parts.append(
-            "This control requires manual verification. "
-            "See auditProcedure in rule properties."
-        )
+        description = base_message + " This control requires manual verification. See auditProcedure in rule properties."
+
+    # Derive a short summary: strip the trailing resource list after ': item, item...'
+    colon_idx = description.find(': ')
+    if colon_idx > 0 and ',' in description[colon_idx + 2:]:
+        short_text = description[:colon_idx]
+    else:
+        short_text = description
 
     # Location – use logical location (tenant / resource) rather than file URI
     # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
@@ -176,7 +181,7 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
         "ruleIndex": rule_index,
         "kind": kind,
         "level": level,
-        "message": {"text": " ".join(message_parts)},
+        "message": {"text": short_text, "description": description},
         "properties": {
             "status": finding.status.value,
             "resourceId": finding.resource_id,

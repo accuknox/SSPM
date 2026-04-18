@@ -54,9 +54,4 @@ class CIS_2_1_5(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Run: aws organizations list-delegated-administrators to verify a dedicated member "
-            "account is configured as delegated administrator for AWS Organizations policy "
-            "management. The management account should not be used directly for day-to-day "
-            "policy management."
-        )
+        return self._manual()

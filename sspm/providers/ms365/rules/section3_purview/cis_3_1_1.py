@@ -109,7 +109,4 @@ class CIS_3_1_1(MS365Rule):
                 ],
             )
 
-        return self._manual(
-            "Verify audit log status via Exchange Online PowerShell: "
-            "Get-AdminAuditLogConfig | Select-Object UnifiedAuditLogIngestionEnabled"
-        )
+        return self._manual()

@@ -79,11 +79,4 @@ class CIS_3_1_2_2_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Google Docs add-ons installation is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Select Features and Applications → Add-Ons\n"
-            "  4. Ensure 'Allow users to install Google Docs add-ons from add-ons "
-            "store' is unchecked"
-        )
+        return self._manual()

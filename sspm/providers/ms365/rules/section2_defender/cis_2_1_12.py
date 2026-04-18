@@ -73,9 +73,4 @@ class CIS_2_1_12(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify connection filter IP allow list via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-HostedConnectionFilterPolicy -Identity Default | Select IPAllowList\n\n"
-            "Compliant: IPAllowList should be empty."
-        )
+        return self._manual()

@@ -74,12 +74,4 @@ class CIS_2_4_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Priority account protection via Microsoft Defender portal:\n"
-            "  1. Go to https://security.microsoft.com\n"
-            "  2. Navigate to Settings > Email & collaboration > User tags\n"
-            "  3. Verify priority accounts are tagged\n"
-            "  4. Verify priority account protection policies are applied\n\n"
-            "Or via Microsoft 365 admin center:\n"
-            "  Setup > Priority account protection"
-        )
+        return self._manual()

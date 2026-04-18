@@ -74,10 +74,4 @@ class CIS_3_1_1_1_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external calendar invitation warnings are enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Calendar\n"
-            "  3. Under Sharing settings, verify 'Warn users when inviting "
-            "external guests' is enabled"
-        )
+        return self._manual()

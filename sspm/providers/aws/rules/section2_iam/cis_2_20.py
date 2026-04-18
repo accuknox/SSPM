@@ -56,9 +56,4 @@ class CIS_2_20(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that AWSCloudShellFullAccess is restricted to authorized users only. "
-            "Run: aws iam list-entities-for-policy "
-            "--policy-arn arn:aws:iam::aws:policy/AWSCloudShellFullAccess "
-            "and review the attached users, groups, and roles."
-        )
+        return self._manual()

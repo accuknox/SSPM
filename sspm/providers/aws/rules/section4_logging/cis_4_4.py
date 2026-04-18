@@ -51,9 +51,4 @@ class CIS_4_4(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that server access logging is enabled on the S3 bucket used by CloudTrail. "
-            "Run: aws s3api get-bucket-logging --bucket <cloudtrail-bucket-name> and confirm "
-            "that LoggingEnabled is present. If not set, enable it by configuring a target "
-            "bucket and prefix for the server access logs."
-        )
+        return self._manual()

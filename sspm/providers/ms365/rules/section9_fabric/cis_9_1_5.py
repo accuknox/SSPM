@@ -67,10 +67,4 @@ class CIS_9_1_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify R and Python visuals are disabled in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > R and Python visuals settings\n"
-            "  3. Verify R and Python visuals are disabled\n"
-            "  Compliant: Both are disabled"
-        )
+        return self._manual()

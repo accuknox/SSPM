@@ -51,8 +51,4 @@ class CIS_2_1_3(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify manually that the AWS Organizations management account does not host "
-            "production workloads. Check for running EC2 instances, RDS databases, Lambda "
-            "functions, and other workload resources in the management account."
-        )
+        return self._manual()

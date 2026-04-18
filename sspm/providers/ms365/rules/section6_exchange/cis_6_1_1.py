@@ -68,9 +68,4 @@ class CIS_6_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Exchange Online audit configuration:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-OrganizationConfig | Select-Object AuditDisabled\n\n"
-            "Compliant: AuditDisabled = False"
-        )
+        return self._manual()

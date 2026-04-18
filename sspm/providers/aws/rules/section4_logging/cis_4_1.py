@@ -52,8 +52,4 @@ class CIS_4_1(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that CloudTrail is enabled in all regions. Run: aws cloudtrail describe-trails "
-            "--include-shadow-trails and confirm at least one multi-region trail (IsMultiRegionTrail=true) "
-            "is active (IsLogging=true via get-trail-status). Confirm the trail captures management events."
-        )
+        return self._manual()

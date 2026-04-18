@@ -70,10 +70,4 @@ class CIS_6_5_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify MailTips are enabled via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-OrganizationConfig | Select-Object MailTipsAllTipsEnabled, "
-            "MailTipsExternalRecipientsTipsEnabled\n\n"
-            "Compliant: MailTipsAllTipsEnabled = True"
-        )
+        return self._manual()

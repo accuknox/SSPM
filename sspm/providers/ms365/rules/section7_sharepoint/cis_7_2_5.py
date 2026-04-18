@@ -97,8 +97,4 @@ class CIS_7_2_5(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Re-sharing prevention setting not found. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing\n"
-            "  Check 'Allow guests to share items they don't own'"
-        )
+        return self._manual()

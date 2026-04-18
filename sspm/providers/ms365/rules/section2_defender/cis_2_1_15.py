@@ -76,9 +76,4 @@ class CIS_2_1_15(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify outbound anti-spam auto-forwarding setting via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-HostedOutboundSpamFilterPolicy | Select Name, AutoForwardingMode\n\n"
-            "Compliant: AutoForwardingMode = Off (not 'On')."
-        )
+        return self._manual()

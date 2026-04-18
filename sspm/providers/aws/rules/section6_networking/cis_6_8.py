@@ -53,9 +53,4 @@ class CIS_6_8(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that VPC Endpoints are configured for commonly used AWS services "
-            "(S3, DynamoDB, KMS, SSM, etc.). Run: aws ec2 describe-vpc-endpoints --region <region> "
-            "and verify endpoints exist for all services accessed from within VPCs. "
-            "Confirm endpoints are in 'available' state and properly associated with route tables."
-        )
+        return self._manual()

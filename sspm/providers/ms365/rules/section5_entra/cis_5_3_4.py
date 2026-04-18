@@ -97,11 +97,7 @@ class CIS_5_3_4(MS365Rule):
                 break
 
         if ga_policy is None:
-            return self._manual(
-                "Global Administrator PIM policy not found. Verify manually:\n"
-                "  Microsoft Entra admin center → Identity governance > PIM > "
-                "Microsoft Entra roles > Global Administrator > Role settings"
-            )
+            return self._manual()
 
         # Check for approval requirement in the rules
         rules = ga_policy.get("rules") or []

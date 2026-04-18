@@ -72,10 +72,4 @@ class CIS_8_4_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Teams app permission policies via Microsoft Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsAppPermissionPolicy | Select-Object Identity, "
-            "DefaultCatalogApps, PrivateCatalogApps\n\n"
-            "Compliant: Third-party apps are blocked or limited in the global policy."
-        )
+        return self._manual()

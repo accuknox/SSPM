@@ -76,12 +76,4 @@ class CIS_5_1_8_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify password hash synchronization for hybrid environments:\n"
-            "  1. On the Microsoft Entra Connect server, run:\n"
-            "     Get-ADSyncScheduler | Select-Object SyncCycleEnabled\n"
-            "     Get-ADSyncConnector | Where-Object {$_.Name -like '*AAD*'}\n"
-            "  2. Check Microsoft Entra Connect Health in Azure portal\n"
-            "  3. Verify Password Hash Sync is enabled and healthy\n\n"
-            "Note: Only applies to hybrid environments using Entra Connect."
-        )
+        return self._manual()

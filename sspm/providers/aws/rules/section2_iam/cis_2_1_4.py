@@ -49,8 +49,4 @@ class CIS_2_1_4(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Review the AWS Organizations OU structure to verify it is organized by environment "
-            "(production, non-production, sandbox) and data sensitivity, not by corporate "
-            "organizational chart. Confirm appropriate SCPs are attached to each environment OU."
-        )
+        return self._manual()

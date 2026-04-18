@@ -78,10 +78,4 @@ class CIS_2_1_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify spam policy admin notifications via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-HostedContentFilterPolicy | Select Name, BulkSpamAction, "
-            "SpamAction, HighConfidenceSpamAction\n\n"
-            "Verify spam is set to Quarantine and notification policies are configured."
-        )
+        return self._manual()

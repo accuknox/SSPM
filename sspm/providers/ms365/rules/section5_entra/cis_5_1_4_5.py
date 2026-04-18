@@ -105,9 +105,4 @@ class CIS_5_1_4_5(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "LAPS status could not be determined from device registration policy. "
-            "Verify manually:\n"
-            "  Microsoft Entra admin center → Identity > Devices > Device settings\n"
-            "  Check 'Enable Microsoft Entra Local Administrator Password Solution (LAPS)'"
-        )
+        return self._manual()

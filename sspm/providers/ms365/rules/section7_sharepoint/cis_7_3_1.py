@@ -95,8 +95,4 @@ class CIS_7_3_1(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Infected file download setting not found. Verify manually:\n"
-            "  SharePoint admin center → Settings\n"
-            "  Check infected file download settings"
-        )
+        return self._manual()

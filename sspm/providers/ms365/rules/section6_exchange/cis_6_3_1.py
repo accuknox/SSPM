@@ -70,10 +70,4 @@ class CIS_6_3_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Outlook add-in installation restrictions:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-RoleAssignmentPolicy 'Default Role Assignment Policy' | "
-            "Select-Object Name, AssignedRoles\n\n"
-            "Compliant: 'My Custom Apps' and 'My Marketplace Apps' are not in AssignedRoles."
-        )
+        return self._manual()

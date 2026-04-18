@@ -56,8 +56,4 @@ class CIS_2_1_6(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that AWS Organizations-integrated services (Security Hub, GuardDuty, Config, "
-            "Macie, etc.) are managed via delegated administrator accounts, not the management "
-            "account. Run: aws organizations list-delegated-administrators for each service principal."
-        )
+        return self._manual()

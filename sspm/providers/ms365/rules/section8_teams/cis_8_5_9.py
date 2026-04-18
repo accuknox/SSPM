@@ -67,9 +67,4 @@ class CIS_8_5_9(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify meeting recording settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowCloudRecording\n\n"
-            "Compliant: AllowCloudRecording = False (recording disabled by default)."
-        )
+        return self._manual()

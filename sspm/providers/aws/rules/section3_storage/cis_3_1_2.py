@@ -54,9 +54,4 @@ class CIS_3_1_2(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that MFA Delete is enabled on S3 buckets containing sensitive data. "
-            "Run: aws s3api get-bucket-versioning --bucket <bucket-name> and check that "
-            "MFADelete == 'Enabled'. Note: enabling MFA Delete requires root account credentials "
-            "and an MFA device."
-        )
+        return self._manual()

@@ -72,9 +72,4 @@ class CIS_6_5_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify SMTP AUTH is disabled via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-TransportConfig | Select-Object SmtpClientAuthenticationDisabled\n\n"
-            "Compliant: SmtpClientAuthenticationDisabled = True"
-        )
+        return self._manual()

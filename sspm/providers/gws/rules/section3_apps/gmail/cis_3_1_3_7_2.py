@@ -85,12 +85,4 @@ class CIS_3_1_3_7_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify email is sent over a secure TLS connection:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select Compliance\n"
-            "  4. Select Secure transport (TLS) compliance → Configure\n"
-            "  5. Ensure Inbound is set to require TLS for all messages\n"
-            "  6. Ensure Outbound is set to require TLS for all messages"
-        )
+        return self._manual()

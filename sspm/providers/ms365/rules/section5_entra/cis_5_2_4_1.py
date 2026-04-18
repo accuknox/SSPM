@@ -102,9 +102,4 @@ class CIS_5_2_4_1(MS365Rule):
             )
 
         # Field absent — fall back to manual guidance
-        return self._manual(
-            "The allowedToUseSSPR flag was not present in the authorization policy. "
-            "Verify SSPR manually:\n"
-            "  Microsoft Entra admin center → Protection > Password reset > Properties\n"
-            "  Ensure 'Self-service password reset enabled' is set to 'All'."
-        )
+        return self._manual()

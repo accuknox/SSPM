@@ -72,11 +72,4 @@ class CIS_1_3_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify third-party storage restrictions via the admin center:\n"
-            "  1. Go to https://admin.microsoft.com\n"
-            "  2. Navigate to Settings > Org settings > Office on the web\n"
-            "  3. Verify 'Allow users to open files stored in third-party storage "
-            "services in Office on the web' is disabled\n\n"
-            "There is no Microsoft Graph API available for this setting."
-        )
+        return self._manual()

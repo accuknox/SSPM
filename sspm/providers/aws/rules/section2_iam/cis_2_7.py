@@ -56,9 +56,4 @@ class CIS_2_7(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Review the IAM credential report (aws iam get-credential-report) and check the "
-            "<root_account> row's password_last_used field. If the root account has been used "
-            "recently, investigate and migrate those activities to appropriate IAM identities. "
-            "Root account usage should be extremely rare and documented."
-        )
+        return self._manual()

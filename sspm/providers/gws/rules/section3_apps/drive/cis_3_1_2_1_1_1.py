@@ -80,10 +80,4 @@ class CIS_3_1_2_1_1_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external sharing warning for Drive files:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing Settings → Sharing options → Sharing outside of <Company>\n"
-            "  4. Verify 'Warn when sharing outside of <Company>' is checked"
-        )
+        return self._manual()

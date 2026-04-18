@@ -55,8 +55,4 @@ class CIS_3_1_3(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that Amazon Macie or an equivalent data classification tool is enabled and "
-            "has scanned all S3 buckets. Review findings and ensure sensitive data is secured "
-            "with appropriate controls. Run: aws macie2 get-macie-session to check Macie status."
-        )
+        return self._manual()

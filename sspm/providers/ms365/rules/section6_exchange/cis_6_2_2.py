@@ -69,10 +69,4 @@ class CIS_6_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify no domain whitelist transport rules exist:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-TransportRule | Where-Object {$_.SetSCL -eq -1} | "
-            "Select-Object Name, Conditions, SetSCL\n\n"
-            "Compliant: No transport rules set SCL to -1 (bypass all filtering)."
-        )
+        return self._manual()

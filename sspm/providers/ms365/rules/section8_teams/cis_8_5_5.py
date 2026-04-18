@@ -66,9 +66,4 @@ class CIS_8_5_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify meeting chat anonymous user settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object MeetingChatEnabledType\n\n"
-            "Compliant: MeetingChatEnabledType restricts anonymous participants."
-        )
+        return self._manual()

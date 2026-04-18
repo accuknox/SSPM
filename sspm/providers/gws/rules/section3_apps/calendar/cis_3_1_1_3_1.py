@@ -74,10 +74,4 @@ class CIS_3_1_1_3_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify calendar web offline is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Calendar\n"
-            "  3. Under Advanced settings → Calendar web offline\n"
-            "  4. Ensure 'Allow using Calendar on the web when offline' is unchecked"
-        )
+        return self._manual()

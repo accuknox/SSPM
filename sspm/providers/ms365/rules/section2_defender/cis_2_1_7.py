@@ -82,11 +82,4 @@ class CIS_2_1_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify anti-phishing policies via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-AntiPhishPolicy | Select Name, Enabled, "
-            "EnableMailboxIntelligence, EnableSpoofIntelligence\n\n"
-            "A custom (non-default) policy with impersonation and spoof protection "
-            "enabled is compliant."
-        )
+        return self._manual()

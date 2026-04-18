@@ -66,10 +66,4 @@ class CIS_9_1_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify guest access to Microsoft Fabric content:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Export and sharing settings\n"
-            "  3. Review all guest and external access settings\n"
-            "  Compliant: Guest access is restricted to explicitly shared content"
-        )
+        return self._manual()

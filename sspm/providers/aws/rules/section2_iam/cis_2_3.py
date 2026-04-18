@@ -53,9 +53,4 @@ class CIS_2_3(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Security contact information can only be verified via the AWS Management Console "
-            "(Account → Alternate Contacts → Security section). Confirm that a name, email, "
-            "and phone number are entered for the Security contact, ideally pointing to a team "
-            "distribution list."
-        )
+        return self._manual()

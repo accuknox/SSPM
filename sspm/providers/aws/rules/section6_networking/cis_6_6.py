@@ -56,9 +56,4 @@ class CIS_6_6(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Review routing tables for VPC peering connections to verify they use specific CIDRs "
-            "rather than 0.0.0.0/0 or ::/0. Run: aws ec2 describe-route-tables and check routes "
-            "with VpcPeeringConnectionId set. Verify destination CIDRs are specific to the "
-            "peered VPC's address space."
-        )
+        return self._manual()

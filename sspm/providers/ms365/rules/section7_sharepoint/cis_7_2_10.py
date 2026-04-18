@@ -98,8 +98,4 @@ class CIS_7_2_10(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Email attestation setting not found or unclear. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing\n"
-            "  Check reauthentication requirements for verification code recipients"
-        )
+        return self._manual()

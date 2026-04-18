@@ -54,11 +54,4 @@ class CIS_4_10(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify that access logging is enabled for all AWS web front-end services:\n"
-            "1. CloudFront: Check each distribution's Logging settings.\n"
-            "2. API Gateway: Check each stage's access log settings.\n"
-            "3. Application Load Balancer: Check access_logs.s3.enabled attribute.\n"
-            "4. Classic Load Balancer: Check AccessLog settings.\n"
-            "Use AWS Console or the respective CLI commands to verify each service."
-        )
+        return self._manual()

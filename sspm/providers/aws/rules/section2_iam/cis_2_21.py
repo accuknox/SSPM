@@ -57,9 +57,4 @@ class CIS_2_21(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Review all resource-based policies (S3, KMS, SNS, SQS, etc.) for statements "
-            "using Principal: '*' or Principal: {AWS: '*'} without restrictive conditions. "
-            "Run aws iam list-bucket-policies, get-key-policy, and similar commands for each "
-            "resource type and verify broad access is intentional and properly conditioned."
-        )
+        return self._manual()

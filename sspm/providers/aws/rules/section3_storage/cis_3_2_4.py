@@ -51,8 +51,4 @@ class CIS_3_2_4(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Review RDS instances to confirm production databases use Multi-AZ deployments. "
-            "Run: aws rds describe-db-instances and check MultiAZ field for all production "
-            "instances. Non-production instances may not require Multi-AZ."
-        )
+        return self._manual()

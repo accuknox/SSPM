@@ -118,10 +118,4 @@ class CIS_5_1_6_1(MS365Rule):
                     ],
                 )
 
-        return self._manual(
-            "Could not fully verify domain restriction for collaboration invitations. "
-            "Verify manually:\n"
-            "  Microsoft Entra admin center → Identity > External identities > "
-            "External collaboration settings\n"
-            "  Check 'Collaboration restrictions' for allowed/denied domains"
-        )
+        return self._manual()

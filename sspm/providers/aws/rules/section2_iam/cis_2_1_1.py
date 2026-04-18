@@ -53,8 +53,4 @@ class CIS_2_1_1(AWSRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._manual(
-            "Verify in the AWS Management Console: Organizations → Root access management is "
-            "enabled, and IAM → Root access management shows root credentials management is "
-            "turned on for all member accounts."
-        )
+        return self._manual()
