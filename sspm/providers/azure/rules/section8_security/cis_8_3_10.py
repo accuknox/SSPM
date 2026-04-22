@@ -47,8 +47,4 @@ class CIS_8_3_10(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification: review the organization's key "
-            "management policy to determine if Managed HSM is required for any workload, "
-            "and confirm that such workloads use Azure Key Vault Managed HSM."
-        )
+        return self._manual()

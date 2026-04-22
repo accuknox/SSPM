@@ -45,8 +45,4 @@ class CIS_8_1_3_4(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification in the Azure portal: "
-            "Defender for Cloud → Environment settings → Servers → Settings → "
-            "confirm Agentless scanning for machines is On."
-        )
+        return self._manual()

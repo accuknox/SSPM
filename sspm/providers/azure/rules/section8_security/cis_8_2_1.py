@@ -45,7 +45,4 @@ class CIS_8_2_1(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification in the Azure portal: "
-            "navigate to each IoT Hub → Defender for IoT → confirm the plan is On."
-        )
+        return self._manual()

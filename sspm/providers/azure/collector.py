@@ -83,7 +83,7 @@ API_VERSIONS = {
     "network": "2023-09-01",
     "insights": "2021-05-01-preview",
     "insights_components": "2020-02-02",
-    "insights_alerts": "2020-01-01-preview",
+    "insights_alerts": "2020-10-01",
     "security": "2023-01-01",
     "security_contacts": "2020-01-01-preview",
     "security_pricings": "2024-01-01",
@@ -454,12 +454,18 @@ class AzureCollector:
         self._data["key_vault_secrets"] = result
 
     def _collect_keyvault_certificates(self) -> None:
+        vaults = self._data.get("key_vaults", [])
         result: dict[str, list[dict[str, Any]]] = {}
-        for vault in self._data.get("key_vaults", []):
+        fetch_attempted = 0
+        for vault in vaults:
             vid = vault.get("id", "")
+            fetch_attempted += 1
             try:
                 items = self._arm_list(f"{vid}/certificates", API_VERSIONS["keyvault_items"])
                 result[vid] = items
             except Exception as exc:  # noqa: BLE001
                 log.debug("key vault certs fetch failed for %s: %s", vid, exc)
-        self._data["key_vault_certificates"] = result
+        # If we tried to fetch from vaults but got nothing back, ARM doesn't
+        # support the certificate list endpoint for this tenant — set to None
+        # so that cis_8_3_11 skips rather than reporting a false pass.
+        self._data["key_vault_certificates"] = result if result else (None if fetch_attempted else {})

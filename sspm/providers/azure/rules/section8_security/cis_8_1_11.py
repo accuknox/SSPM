@@ -46,8 +46,4 @@ class CIS_8_1_11(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification in the Azure portal: "
-            "Azure Policy → Assignments → Microsoft Cloud Security Benchmark → "
-            "confirm no non-deprecated policy effect is set to 'Disabled'."
-        )
+        return self._manual()

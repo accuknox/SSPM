@@ -47,8 +47,4 @@ class CIS_8_1_16(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification in the Azure portal: "
-            "confirm that a Microsoft Defender EASM workspace has been created and "
-            "configured with organizational seeds."
-        )
+        return self._manual()

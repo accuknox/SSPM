@@ -48,7 +48,4 @@ class CIS_8_1_5_2(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        return self._skip(
-            "This control requires manual verification: confirm that a process exists to "
-            "monitor and triage Defender for Storage ATP alerts in the Azure portal or SIEM."
-        )
+        return self._manual()
