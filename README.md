@@ -6,6 +6,8 @@ popular SaaS platforms against industry-standard benchmarks (CIS, NIST, etc.).
 Initial targets:
 - **Microsoft 365** against *CIS Microsoft 365 Foundations Benchmark v6.0.1*
 - **Google Workspace** against *CIS Google Workspace Foundations Benchmark v1.3.0*
+- **AWS** against *CIS AWS Foundations Benchmark v1.2.0*
+- **Microsoft Azure** against *CIS Microsoft Azure Foundations Benchmark v6.0.0*
 
 Output: **SARIF 2.1.0** JSON, compatible with GitHub Advanced Security,
 Azure DevOps, VS Code (SARIF Viewer), and any SARIF-aware toolchain.
@@ -368,6 +370,87 @@ Only verified domains are scanned for DNS checks (SPF, DKIM, DMARC).
 
 ---
 
+## Azure Coverage
+
+The Azure provider targets *CIS Microsoft Azure Foundations Benchmark v6.0.0*
+at the subscription scope. Authentication uses Entra ID app-only credentials;
+data is collected directly from Azure Resource Manager (ARM) and Microsoft
+Graph REST APIs — no `azure-mgmt-*` SDK dependency.
+
+| Section | Area | Rules |
+|---------|------|-------|
+| 5 | Identity & RBAC | Security defaults, MFA (manual), User Access Administrator hygiene, custom subscription admin roles, subscription owner count |
+| 6 | Logging & Monitoring | Subscription activity log diagnostic settings, Key Vault audit logging |
+| 7 | Networking | RDP/SSH from Internet, NSG flow-log retention ≥ 90 days, Network Watcher coverage |
+| 8 | Security Services | Defender CSPM On, Defender for Servers On, security-contact email, Key Vault purge protection / RBAC / public-access, Bastion presence |
+| 9 | Storage Accounts | File/blob soft delete, shared-key access off, public network access off, default Deny ACL, HTTPS only, TLS 1.2, cross-tenant replication off, blob anonymous access off |
+
+### Setting Up Credentials for Scanning
+
+The scanner uses an **Entra ID App Registration** with the **Reader** role on
+the target subscription. A **Global Administrator** (or user with equivalent
+delegated rights) must complete the one-time setup below.
+
+---
+
+#### Step 1 — Create the App Registration
+
+Follow the same procedure as the MS365 setup (Steps 1 & 2 above) to create an
+app registration and a client secret. Capture:
+
+- **Application (client) ID** → `--client-id`
+- **Directory (tenant) ID** → `--tenant-id`
+- **Client secret value** → `--client-secret`
+
+---
+
+#### Step 2 — Grant Subscription-Level RBAC
+
+1. In the **Azure portal**, open the subscription you want to scan.
+2. Go to **Access control (IAM) → Add → Add role assignment**.
+3. Select the built-in role **Reader**.
+4. **Members:** *User, group, or service principal* → search for the app
+   registration name from Step 1.
+5. Click **Review + assign**.
+
+The Reader role grants read access to all resource metadata needed by the
+benchmark (no data-plane permissions are required for configuration checks).
+
+> **Tip:** For Key Vault diagnostic-setting and Defender for Cloud checks,
+> Reader is sufficient. To evaluate data-plane policies (keys / secrets
+> listing), additionally grant the app the **Key Vault Reader** role.
+
+---
+
+#### Step 3 — Grant Microsoft Graph Permissions (Identity checks)
+
+The Section 5 identity checks (e.g. `azure-cis-5.1.1` – security defaults)
+query Microsoft Graph. In the app registration:
+
+1. **API permissions → Add a permission → Microsoft Graph → Application**.
+2. Add **`Policy.Read.All`** (read tenant identity-security policy).
+3. Click **Grant admin consent for \<your tenant\>**.
+
+---
+
+#### Step 4 — Capture the Subscription ID
+
+`az account show --query id -o tsv` or **Subscriptions** in the Azure portal.
+This is your `--subscription-id`.
+
+---
+
+#### Summary: Values You Need
+
+| Value | Where to find it | CLI flag / env var |
+|-------|-----------------|-------------------|
+| Tenant ID | Entra app overview → Directory (tenant) ID | `--tenant-id` / `AZURE_TENANT_ID` |
+| Client ID | Entra app overview → Application (client) ID | `--client-id` / `AZURE_CLIENT_ID` |
+| Client Secret | Created in Step 1 | `--client-secret` / `AZURE_CLIENT_SECRET` |
+| Subscription ID | Subscriptions blade | `--subscription-id` / `AZURE_SUBSCRIPTION_ID` |
+
+---
+
 ## Microsoft 365 Coverage
 
 ```bash
@@ -402,9 +485,19 @@ sspm scan gws \
   --output gws-report.sarif.json \
   --verbose
 
+# Scan an Azure subscription
+sspm scan azure \
+  --tenant-id       <TENANT_ID>        \
+  --client-id       <CLIENT_ID>        \
+  --client-secret   <SECRET>           \
+  --subscription-id <SUBSCRIPTION_ID>  \
+  --output azure-report                \
+  --verbose
+
 # Filter to a specific CIS profile
 sspm scan ms365 ... --profile "E3 Level 1"
 sspm scan gws   ... --profile "Enterprise Level 1"
+sspm scan azure ... --profile "Azure Level 1"
 
 # Run specific rules only
 sspm scan ms365 ... \
@@ -431,6 +524,13 @@ export SSPM_GWS_SA_FILE=/path/to/sa-key.json
 export SSPM_GWS_ADMIN_EMAIL=admin@example.com
 export SSPM_GWS_DOMAIN=example.com
 sspm scan gws
+
+# Azure
+export AZURE_TENANT_ID=<TENANT_ID>
+export AZURE_CLIENT_ID=<CLIENT_ID>
+export AZURE_CLIENT_SECRET=<SECRET>
+export AZURE_SUBSCRIPTION_ID=<SUBSCRIPTION_ID>
+sspm scan azure
 ```
 
 ### Python API

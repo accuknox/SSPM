@@ -12,7 +12,9 @@ license = { text = "Proprietary" }
 authors = [{ name = "AccuKnox", email = "security@accuknox.com" }]
 
 dependencies = [
+    # HTTP client — used by MS365, GWS, and Azure providers
     "httpx>=0.27",
+    # MSAL — client-credentials auth for MS365 and Azure (ARM + Graph)
     "msal>=1.28",
     "click>=8.1",
     "pydantic>=2.7",

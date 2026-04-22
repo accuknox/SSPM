@@ -62,6 +62,9 @@ class CISProfile(str, Enum):
     # AWS profiles (CIS AWS Foundations Benchmark)
     AWS_L1 = "AWS Level 1"
     AWS_L2 = "AWS Level 2"
+    # Azure profiles (CIS Microsoft Azure Foundations Benchmark)
+    AZURE_L1 = "Azure Level 1"
+    AZURE_L2 = "Azure Level 2"
 
 
 # ---------------------------------------------------------------------------

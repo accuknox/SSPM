@@ -236,6 +236,88 @@ def scan_aws(
         sys.exit(1)
 
 
+@scan.command("azure")
+@click.option("--tenant-id", required=True, envvar="AZURE_TENANT_ID", help="Entra tenant ID (GUID).")
+@click.option("--client-id", required=True, envvar="AZURE_CLIENT_ID", help="App registration client ID.")
+@click.option("--client-secret", required=True, envvar="AZURE_CLIENT_SECRET", help="App registration client secret.")
+@click.option("--subscription-id", required=True, envvar="AZURE_SUBSCRIPTION_ID",
+              help="Azure subscription ID to scan.")
+@click.option("--subscription-label", default="", envvar="SSPM_AZURE_SUBSCRIPTION_LABEL",
+              help="Human-readable label for the subscription (defaults to the subscription ID).")
+@click.option("--profile", "profile_filter", default=None,
+              help='CIS profile filter: "Azure Level 1" or "Azure Level 2".')
+@click.option("--rule", "rule_ids", multiple=True, help="Limit scan to specific rule IDs (repeatable).")
+@click.option("--output", "-o", default="sspm-azure-report", show_default=True,
+              help="Output file stem. Produces <stem>.html and <stem>.sarif.json.")
+@click.option("--no-html", is_flag=True, default=False, help="Skip HTML report generation.")
+@click.option("--no-sarif", is_flag=True, default=False, help="Skip SARIF report generation.")
+@click.option("--verbose", "-v", is_flag=True, help="Show individual findings in the terminal.")
+def scan_azure(
+    tenant_id: str,
+    client_id: str,
+    client_secret: str,
+    subscription_id: str,
+    subscription_label: str,
+    profile_filter: str | None,
+    rule_ids: tuple[str, ...],
+    output: str,
+    no_html: bool,
+    no_sarif: bool,
+    verbose: bool,
+) -> None:
+    """Scan an Azure subscription against CIS Microsoft Azure Foundations Benchmark v6.0.0."""
+    import logging
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
+    from sspm.core.engine import ScanEngine
+    from sspm.core.html_reporter import write_html
+    from sspm.core.reporter import write_sarif
+    from sspm.providers.azure.provider import AzureProvider
+
+    provider = AzureProvider(
+        tenant_id=tenant_id,
+        client_id=client_id,
+        client_secret=client_secret,
+        subscription_id=subscription_id,
+        subscription_label=subscription_label,
+    )
+
+    engine = ScanEngine(
+        provider=provider,
+        profile_filter=profile_filter,
+        rule_ids=list(rule_ids) if rule_ids else None,
+    )
+
+    console.print(f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (Azure)")
+    if profile_filter:
+        console.print(f"  Profile filter: [yellow]{profile_filter}[/yellow]")
+
+    result = asyncio.run(engine.scan())
+
+    stem = output
+    for ext in (".html", ".sarif.json", ".sarif", ".json"):
+        if stem.endswith(ext):
+            stem = stem[: -len(ext)]
+            break
+
+    console.print()
+    if not no_html:
+        html_path = f"{stem}.html"
+        write_html(result, html_path)
+        console.print(f"[green]HTML  report:[/green] {html_path}")
+
+    if not no_sarif:
+        sarif_path = f"{stem}.sarif.json"
+        write_sarif(result, sarif_path)
+        console.print(f"[green]SARIF report:[/green] {sarif_path}")
+
+    _print_summary(result, verbose=verbose)
+
+    if result.failed:
+        sys.exit(1)
+
+
 @scan.command("ms365")
 @click.option("--tenant-id", required=True, envvar="SSPM_TENANT_ID", help="Entra tenant ID (GUID).")
 @click.option("--client-id", required=True, envvar="SSPM_CLIENT_ID", help="App registration client ID.")
@@ -341,6 +423,9 @@ def rules_list(provider: str | None, profile: str | None) -> None:
     if not provider or provider == "aws":
         from sspm.providers.aws.provider import AWSProvider  # noqa: F401
         AWSProvider._autodiscover()
+    if not provider or provider == "azure":
+        from sspm.providers.azure.provider import AzureProvider  # noqa: F401
+        AzureProvider._autodiscover()
 
     from sspm.core.models import CISProfile
     from sspm.core.registry import registry
