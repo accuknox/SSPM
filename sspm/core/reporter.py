@@ -119,21 +119,21 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
         level = "none"
 
     # Build the message
-    base_message = finding.message or finding.rule.title
-    full_message = base_message
     if finding.status == FindingStatus.MANUAL:
-        full_message = base_message + " This control requires manual verification. See auditProcedure in rule properties."
-
-    # text = short finding summary (strip trailing ': item, item...' resource list if present)
-    colon_idx = full_message.find(': ')
-    if colon_idx > 0 and ',' in full_message[colon_idx + 2:]:
-        short_text = full_message[:colon_idx]
+        # Manual findings: short label + rule title as text; CIS description as description.
+        short_text = f"Manual: {finding.rule.title}"
+        description = finding.rule.description
     else:
-        short_text = full_message
-
-    # description = full finding detail when it differs from the short summary;
-    # otherwise fall back to the rule's CIS benchmark description for context.
-    description = full_message if full_message != short_text else finding.rule.description
+        base_message = finding.message or finding.rule.title
+        # text = short finding summary (strip trailing ': item, item...' resource list if present)
+        colon_idx = base_message.find(': ')
+        if colon_idx > 0 and ',' in base_message[colon_idx + 2:]:
+            short_text = base_message[:colon_idx]
+        else:
+            short_text = base_message
+        # description = full finding detail when it differs from the short summary;
+        # otherwise fall back to the rule's CIS benchmark description for context.
+        description = base_message if base_message != short_text else finding.rule.description
 
     # Location – use logical location (tenant / resource) rather than file URI
     # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
