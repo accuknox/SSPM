@@ -29,6 +29,9 @@ Key Vault:
     "key_vaults"                      – list of key vault dicts
     "key_vault_diagnostic_settings"   – {vault_id: [diagnostic_setting_dicts]}
 
+Analytics:
+    "databricks_workspaces"           – list of Azure Databricks workspace dicts
+
 Networking:
     "network_security_groups"         – list of NSG dicts (with securityRules expanded)
     "network_watchers"                – list of network watcher dicts
@@ -37,12 +40,21 @@ Networking:
     "bastion_hosts"                   – list of bastion host dicts
     "virtual_networks"                – list of VNet dicts
     "application_gateways"            – list of App Gateway dicts
+    "vpn_gateways"                    – list of virtualNetworkGateway dicts
 
 Monitoring / Defender:
     "activity_log_diagnostic_settings" – list of subscription-level diagnostic settings
+    "activity_log_alerts"              – list of microsoft.insights/activityLogAlerts dicts
+    "app_insights_components"          – list of microsoft.insights/components dicts
     "defender_pricings"                – list of Microsoft.Security/pricings dicts
     "security_contacts"                – list of Microsoft.Security/securityContacts dicts
-    "security_auto_provisioning"       – list of auto-provisioning settings dicts
+    "auto_provisioning_settings"       – list of Microsoft.Security/autoProvisioningSettings dicts
+    "ddos_protection_plans"            – list of Microsoft.Network/ddosProtectionPlans dicts
+
+Key Vault (per-vault item metadata):
+    "key_vault_keys"          – {vault_id: [key dicts]}  (ARM metadata, not data-plane values)
+    "key_vault_secrets"       – {vault_id: [secret dicts]}
+    "key_vault_certificates"  – {vault_id: [certificate dicts]}
 """
 
 from __future__ import annotations
@@ -67,11 +79,16 @@ API_VERSIONS = {
     "authorization_classic": "2015-06-01",
     "storage": "2023-01-01",
     "keyvault": "2023-07-01",
+    "keyvault_items": "2021-10-01",
     "network": "2023-09-01",
     "insights": "2021-05-01-preview",
+    "insights_components": "2020-02-02",
+    "insights_alerts": "2020-01-01-preview",
     "security": "2023-01-01",
     "security_contacts": "2020-01-01-preview",
     "security_pricings": "2024-01-01",
+    "security_auto": "2017-08-01-preview",
+    "databricks": "2023-02-01",
 }
 
 
@@ -116,12 +133,22 @@ class AzureCollector:
         self._safe("bastion_hosts", self._collect_bastion_hosts)
         self._safe("public_ip_addresses", self._collect_public_ips)
         self._safe("virtual_networks", self._collect_vnets)
+        self._safe("application_gateways", self._collect_application_gateways)
+        self._safe("vpn_gateways", self._collect_vpn_gateways)
+        self._safe("ddos_protection_plans", self._collect_ddos_protection_plans)
         self._safe(
             "activity_log_diagnostic_settings",
             self._collect_activity_log_diagnostics,
         )
+        self._safe("activity_log_alerts", self._collect_activity_log_alerts)
+        self._safe("app_insights_components", self._collect_app_insights)
         self._safe("defender_pricings", self._collect_defender_pricings)
         self._safe("security_contacts", self._collect_security_contacts)
+        self._safe("auto_provisioning_settings", self._collect_auto_provisioning)
+        self._safe("databricks_workspaces", self._collect_databricks_workspaces)
+        self._safe("key_vault_keys", self._collect_keyvault_keys)
+        self._safe("key_vault_secrets", self._collect_keyvault_secrets)
+        self._safe("key_vault_certificates", self._collect_keyvault_certificates)
 
     def _safe(self, key: str, fn) -> None:
         try:
@@ -347,3 +374,92 @@ class AzureCollector:
             API_VERSIONS["security_contacts"],
         )
         self._data["security_contacts"] = items
+
+    def _collect_application_gateways(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Network/applicationGateways",
+            API_VERSIONS["network"],
+        )
+        self._data["application_gateways"] = items
+
+    def _collect_vpn_gateways(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Network/virtualNetworkGateways",
+            API_VERSIONS["network"],
+        )
+        self._data["vpn_gateways"] = items
+
+    def _collect_ddos_protection_plans(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Network/ddosProtectionPlans",
+            API_VERSIONS["network"],
+        )
+        self._data["ddos_protection_plans"] = items
+
+    def _collect_activity_log_alerts(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/microsoft.insights/activityLogAlerts",
+            API_VERSIONS["insights_alerts"],
+        )
+        self._data["activity_log_alerts"] = items
+
+    def _collect_app_insights(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/microsoft.insights/components",
+            API_VERSIONS["insights_components"],
+        )
+        self._data["app_insights_components"] = items
+
+    def _collect_auto_provisioning(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Security/autoProvisioningSettings",
+            API_VERSIONS["security_auto"],
+        )
+        self._data["auto_provisioning_settings"] = items
+
+    def _collect_databricks_workspaces(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Databricks/workspaces",
+            API_VERSIONS["databricks"],
+        )
+        self._data["databricks_workspaces"] = items
+
+    def _collect_keyvault_keys(self) -> None:
+        result: dict[str, list[dict[str, Any]]] = {}
+        for vault in self._data.get("key_vaults", []):
+            vid = vault.get("id", "")
+            try:
+                items = self._arm_list(f"{vid}/keys", API_VERSIONS["keyvault_items"])
+                result[vid] = items
+            except Exception as exc:  # noqa: BLE001
+                log.debug("key vault keys fetch failed for %s: %s", vid, exc)
+        self._data["key_vault_keys"] = result
+
+    def _collect_keyvault_secrets(self) -> None:
+        result: dict[str, list[dict[str, Any]]] = {}
+        for vault in self._data.get("key_vaults", []):
+            vid = vault.get("id", "")
+            try:
+                items = self._arm_list(f"{vid}/secrets", API_VERSIONS["keyvault_items"])
+                result[vid] = items
+            except Exception as exc:  # noqa: BLE001
+                log.debug("key vault secrets fetch failed for %s: %s", vid, exc)
+        self._data["key_vault_secrets"] = result
+
+    def _collect_keyvault_certificates(self) -> None:
+        result: dict[str, list[dict[str, Any]]] = {}
+        for vault in self._data.get("key_vaults", []):
+            vid = vault.get("id", "")
+            try:
+                items = self._arm_list(f"{vid}/certificates", API_VERSIONS["keyvault_items"])
+                result[vid] = items
+            except Exception as exc:  # noqa: BLE001
+                log.debug("key vault certs fetch failed for %s: %s", vid, exc)
+        self._data["key_vault_certificates"] = result
