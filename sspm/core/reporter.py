@@ -102,6 +102,8 @@ def _target_fqn(provider: str, target: str) -> str:
         return f"ms365://{target}"
     if provider == "gws":
         return f"gws://{target}"
+    if provider == "azure":
+        return f"azure://subscriptions/{target}"
     return target
 
 
@@ -118,16 +120,20 @@ def _finding_result(finding, rule_index: int, target: str = "", provider: str = 
 
     # Build the message
     base_message = finding.message or finding.rule.title
-    description = base_message
+    full_message = base_message
     if finding.status == FindingStatus.MANUAL:
-        description = base_message + " This control requires manual verification. See auditProcedure in rule properties."
+        full_message = base_message + " This control requires manual verification. See auditProcedure in rule properties."
 
-    # Derive a short summary: strip the trailing resource list after ': item, item...'
-    colon_idx = description.find(': ')
-    if colon_idx > 0 and ',' in description[colon_idx + 2:]:
-        short_text = description[:colon_idx]
+    # text = short finding summary (strip trailing ': item, item...' resource list if present)
+    colon_idx = full_message.find(': ')
+    if colon_idx > 0 and ',' in full_message[colon_idx + 2:]:
+        short_text = full_message[:colon_idx]
     else:
-        short_text = description
+        short_text = full_message
+
+    # description = full finding detail when it differs from the short summary;
+    # otherwise fall back to the rule's CIS benchmark description for context.
+    description = full_message if full_message != short_text else finding.rule.description
 
     # Location – use logical location (tenant / resource) rather than file URI
     # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
