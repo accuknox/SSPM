@@ -77,10 +77,4 @@ class CIS_3_1_3_5_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify per-user outbound gateways are disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select End User Access\n"
-            "  4. Ensure 'Allow per-user outbound gateways' is unchecked"
-        )
+        return self._manual()

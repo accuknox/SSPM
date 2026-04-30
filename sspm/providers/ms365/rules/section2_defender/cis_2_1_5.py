@@ -74,9 +74,4 @@ class CIS_2_1_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Safe Attachments for SPO/ODB/Teams via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-AtpPolicyForO365 | Select EnableATPForSPOTeamsODB\n\n"
-            "Compliant: EnableATPForSPOTeamsODB = True."
-        )
+        return self._manual()

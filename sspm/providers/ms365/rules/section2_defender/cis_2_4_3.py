@@ -73,11 +73,4 @@ class CIS_2_4_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Microsoft Defender for Cloud Apps is enabled:\n"
-            "  1. Go to https://security.microsoft.com\n"
-            "  2. Check for Cloud apps in the navigation menu\n"
-            "  3. Verify Defender for Cloud Apps is connected and active\n"
-            "  4. Review connected apps and policies\n\n"
-            "Requires Microsoft 365 E5 or Defender for Cloud Apps license."
-        )
+        return self._manual()

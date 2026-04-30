@@ -67,10 +67,4 @@ class CIS_9_1_9(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Block ResourceKey Authentication in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Developer settings\n"
-            "  3. Check 'Block ResourceKey Authentication'\n"
-            "  Compliant: Setting is enabled (blocked)"
-        )
+        return self._manual()

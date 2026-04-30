@@ -74,11 +74,4 @@ class CIS_3_1_3_4_3_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify protection against spoofing of employee names:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under Safety → Spoofing and authentication\n"
-            "  4. Ensure 'Protect against spoofing of employee names' is checked\n"
-            "  5. Ensure Action is 'Move email to spam'"
-        )
+        return self._manual()

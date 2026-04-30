@@ -80,11 +80,4 @@ class CIS_3_1_3_1_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify mail delegation is disabled for end users:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under User Settings → Mail delegation\n"
-            "  4. Ensure 'Let users delegate access to their mailbox to other "
-            "users in the domain' is unchecked"
-        )
+        return self._manual()

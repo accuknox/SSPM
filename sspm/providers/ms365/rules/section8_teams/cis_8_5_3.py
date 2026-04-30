@@ -66,10 +66,4 @@ class CIS_8_5_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify meeting lobby settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AutoAdmittedUsers\n\n"
-            "Compliant: AutoAdmittedUsers = OrganizerOnly or InvitedUsers "
-            "(not Everyone)."
-        )
+        return self._manual()

@@ -78,9 +78,4 @@ class CIS_3_1_2_1_1_5(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Access Checker is set to 'Recipients only':\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Drive and Docs → Sharing Settings → Sharing Options\n"
-            "  3. Under Access Checker, ensure 'Recipients only' is checked"
-        )
+        return self._manual()

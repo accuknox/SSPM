@@ -71,15 +71,7 @@ class CIS_9_1_1(MS365Rule):
     async def check(self, data: CollectedData):
         fabric_settings = data.get("fabric_tenant_settings")
         if fabric_settings is None:
-            return self._manual(
-                "Verify guest access to Microsoft Fabric in the admin portal:\n"
-                "  1. Go to https://app.powerbi.com/admin\n"
-                "  2. Navigate to Tenant settings > Export and sharing settings\n"
-                "  3. Check 'Allow Azure Active Directory guest users to access Microsoft Fabric'\n"
-                "  Compliant: Setting is disabled\n\n"
-                "Note: Fabric tenant settings require delegated authentication "
-                "and are not available via application-only Graph API calls."
-            )
+            return self._manual()
 
         # If we somehow got fabric settings, check them
         # Setting names vary; check common field names
@@ -98,7 +90,4 @@ class CIS_9_1_1(MS365Rule):
                 )],
             )
 
-        return self._manual(
-            "Verify guest access to Microsoft Fabric in the admin portal:\n"
-            "  https://app.powerbi.com/admin → Tenant settings"
-        )
+        return self._manual()

@@ -96,8 +96,4 @@ class CIS_7_2_9(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Guest access expiration setting not found or unclear. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing\n"
-            "  Check 'Guest access expires after this many days'"
-        )
+        return self._manual()

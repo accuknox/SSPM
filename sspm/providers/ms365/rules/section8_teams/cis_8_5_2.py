@@ -66,9 +66,4 @@ class CIS_8_5_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify anonymous users cannot start meetings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToStartMeeting\n\n"
-            "Compliant: AllowAnonymousUsersToStartMeeting = False"
-        )
+        return self._manual()

@@ -75,11 +75,4 @@ class CIS_3_1_3_3_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify quarantine admin notifications are enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under Manage quarantines\n"
-            "  4. Ensure each quarantine has 'Notify periodically when messages "
-            "are quarantined' checked"
-        )
+        return self._manual()

@@ -81,11 +81,4 @@ class CIS_3_1_2_1_2_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify managers cannot override shared drive settings:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Shared drive creation\n"
-            "  4. Ensure 'Allow members with manager access to override the settings "
-            "below' is unchecked"
-        )
+        return self._manual()

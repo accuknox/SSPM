@@ -68,9 +68,4 @@ class CIS_8_6_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify security concern reporting in Teams via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMessagingPolicy | Select-Object AllowUserReportSecurityConcerns\n\n"
-            "Compliant: AllowUserReportSecurityConcerns = True"
-        )
+        return self._manual()

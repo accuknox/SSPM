@@ -68,11 +68,4 @@ class CIS_8_2_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Teams does not communicate with trial tenants:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTenantFederationConfiguration | Select-Object "
-            "AllowFederatedUsers, AllowedDomains\n\n"
-            "Compliant: External access is limited to specific approved domains "
-            "OR federation is disabled."
-        )
+        return self._manual()

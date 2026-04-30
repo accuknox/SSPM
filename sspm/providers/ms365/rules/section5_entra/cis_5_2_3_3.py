@@ -76,12 +76,4 @@ class CIS_5_2_3_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify on-premises password protection for hybrid environments:\n"
-            "  1. Go to https://entra.microsoft.com\n"
-            "  2. Navigate to Protection > Authentication methods > Password protection\n"
-            "  3. Verify 'Enable password protection on Windows Server Active Directory' is enabled\n"
-            "  4. Verify DC agents are installed and registered on all domain controllers\n"
-            "  5. Verify enforcement mode is set to 'Enforced' (not 'Audit')\n\n"
-            "Note: Only applicable to hybrid environments with on-premises Active Directory."
-        )
+        return self._manual()

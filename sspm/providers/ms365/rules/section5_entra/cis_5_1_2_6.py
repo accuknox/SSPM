@@ -70,11 +70,4 @@ class CIS_5_1_2_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify LinkedIn account connections setting:\n"
-            "  1. Go to https://entra.microsoft.com\n"
-            "  2. Navigate to Identity > Users > User settings\n"
-            "  3. Check 'LinkedIn account connections' setting\n"
-            "  Compliant: Set to 'No' (disabled for all users)\n\n"
-            "This setting cannot be reliably verified via Microsoft Graph API."
-        )
+        return self._manual()

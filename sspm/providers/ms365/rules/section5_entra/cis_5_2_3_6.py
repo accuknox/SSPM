@@ -111,8 +111,5 @@ class CIS_5_2_3_6(MS365Rule):
             )
 
         return self._manual(
-            f"System credential preferences state is '{state}'. "
-            "Verify manually in Microsoft Entra admin center:\n"
-            "  Protection > Authentication methods > Authentication methods policy\n"
-            "  Check 'System-preferred multifactor authentication' status"
+            f"System-preferred MFA state is '{state}'."
         )

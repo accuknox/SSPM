@@ -109,9 +109,4 @@ class CIS_5_1_4_3(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Could not determine the Global Admin local admin setting from device policy. "
-            "Verify manually:\n"
-            "  Microsoft Entra admin center → Identity > Devices > Device settings\n"
-            "  Check 'Additional local administrators on Microsoft Entra joined devices'"
-        )
+        return self._manual()

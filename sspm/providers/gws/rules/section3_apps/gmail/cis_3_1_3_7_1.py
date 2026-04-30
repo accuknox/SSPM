@@ -82,12 +82,4 @@ class CIS_3_1_3_7_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify comprehensive mail storage is enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select Compliance\n"
-            "  4. Select Comprehensive mail storage\n"
-            "  5. Ensure 'Ensure that a copy of all sent and received mail is "
-            "stored in associated users mailboxes' is ON"
-        )
+        return self._manual()

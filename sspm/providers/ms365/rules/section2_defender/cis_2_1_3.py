@@ -77,11 +77,4 @@ class CIS_2_1_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify internal malware notifications via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-MalwareFilterPolicy | Select Name, "
-            "EnableInternalSenderAdminNotifications, InternalSenderAdminAddress\n\n"
-            "Compliant: EnableInternalSenderAdminNotifications = True and "
-            "InternalSenderAdminAddress is set."
-        )
+        return self._manual()

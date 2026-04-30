@@ -74,10 +74,4 @@ class CIS_8_2_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Teams external domain restrictions via Microsoft Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTenantFederationConfiguration | Select-Object "
-            "AllowFederatedUsers, AllowedDomains, BlockedDomains\n\n"
-            "Compliant: Only specific approved domains are in the allowed list."
-        )
+        return self._manual()

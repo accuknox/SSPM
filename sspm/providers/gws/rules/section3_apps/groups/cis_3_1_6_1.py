@@ -94,17 +94,7 @@ class CIS_3_1_6_1(GWSRule):
         group_settings: dict | None = data.get("group_settings")
 
         if group_settings is None:
-            return self._manual(
-                "Group settings could not be collected.  "
-                "Ensure the 'apps.groups.settings' scope is authorised in "
-                "Domain-wide Delegation, then re-run the scan.\n\n"
-                "Manual verification:\n"
-                "  1. Log in to https://admin.google.com\n"
-                "  2. Select Apps → Google Workspace → Groups for Business\n"
-                "  3. Select Sharing options\n"
-                "  4. Ensure 'Accessing groups from outside this organization' "
-                "is set to Private"
-            )
+            return self._manual()
 
         violations: list[tuple[str, str]] = []  # (group_email, reason)
 

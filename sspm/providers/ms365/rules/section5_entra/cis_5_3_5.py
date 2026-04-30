@@ -93,11 +93,7 @@ class CIS_5_3_5(MS365Rule):
                 break
 
         if pra_policy is None:
-            return self._manual(
-                "Privileged Role Administrator PIM policy not found. Verify manually:\n"
-                "  Microsoft Entra admin center → Identity governance > PIM > "
-                "Microsoft Entra roles > Privileged Role Administrator > Role settings"
-            )
+            return self._manual()
 
         rules = pra_policy.get("rules") or []
         approval_required = False

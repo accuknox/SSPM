@@ -80,11 +80,4 @@ class CIS_3_1_2_1_2_4(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify viewers/commenters cannot download, print, or copy files:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Shared drive creation\n"
-            "  4. Ensure 'Allow viewers and commenters to download, print, and copy "
-            "files' is unchecked"
-        )
+        return self._manual()

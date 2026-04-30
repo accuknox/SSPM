@@ -78,12 +78,4 @@ class CIS_1_1_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify super admin accounts are not used for daily tasks:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Reports → Audit and activity → Admin\n"
-            "  3. Review activity for super admin accounts\n"
-            "  4. Confirm admin accounts show only administrative activity, "
-            "not regular Gmail/Drive/Calendar usage\n\n"
-            "Super admins should have separate accounts for day-to-day work."
-        )
+        return self._manual()

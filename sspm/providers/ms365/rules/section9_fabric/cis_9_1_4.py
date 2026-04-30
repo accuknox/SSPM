@@ -69,10 +69,4 @@ class CIS_9_1_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify 'Publish to web' restrictions in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Export and sharing settings\n"
-            "  3. Check 'Publish to web' setting\n"
-            "  Compliant: Disabled or restricted to specific security groups"
-        )
+        return self._manual()

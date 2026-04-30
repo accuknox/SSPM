@@ -67,10 +67,4 @@ class CIS_8_5_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external participant control settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | "
-            "Select-Object AllowExternalParticipantGiveRequestControl\n\n"
-            "Compliant: AllowExternalParticipantGiveRequestControl = False"
-        )
+        return self._manual()

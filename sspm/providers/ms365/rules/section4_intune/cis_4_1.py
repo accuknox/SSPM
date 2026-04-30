@@ -105,11 +105,5 @@ class CIS_4_1(MS365Rule):
         # The actual setting requires GET /deviceManagement/settings
         # Provide a partial check with manual guidance
         return self._manual(
-            f"{len(compliance_policies)} compliance policy/policies found. "
-            "Verify the default compliance setting:\n"
-            "  Microsoft Intune admin center → Devices > Compliance policies > "
-            "Compliance policy settings\n"
-            "  'Mark devices with no compliance policy assigned as' should be "
-            "'Not compliant'.\n\n"
-            "Or via Graph: GET /deviceManagement/settings and check secureByDefault."
+            f"{len(compliance_policies)} compliance policy/policies found. Default compliance setting requires manual verification."
         )

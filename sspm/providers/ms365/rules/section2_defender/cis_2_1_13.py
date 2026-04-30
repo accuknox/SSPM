@@ -69,9 +69,4 @@ class CIS_2_1_13(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify connection filter safe list setting via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-HostedConnectionFilterPolicy -Identity Default | Select EnableSafeList\n\n"
-            "Compliant: EnableSafeList = False."
-        )
+        return self._manual()

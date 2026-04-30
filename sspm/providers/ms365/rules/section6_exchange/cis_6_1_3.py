@@ -71,10 +71,4 @@ class CIS_6_1_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify no mailboxes have audit bypass enabled:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-MailboxAuditBypassAssociation -ResultSize Unlimited | "
-            "Where-Object {$_.AuditBypassEnabled -eq $true}\n\n"
-            "Compliant: No results returned (no mailboxes with audit bypass)."
-        )
+        return self._manual()

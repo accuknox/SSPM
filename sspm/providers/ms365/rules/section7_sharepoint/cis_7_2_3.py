@@ -99,10 +99,7 @@ class CIS_7_2_3(MS365Rule):
 
         sharing_cap = settings.get("sharingCapability")
         if sharing_cap is None:
-            return self._manual(
-                "SharePoint settings retrieved but sharingCapability field not found. "
-                "Verify manually in SharePoint admin center → Policies > Sharing."
-            )
+            return self._manual()
 
         if sharing_cap in _COMPLIANT_VALUES:
             cap_names = {0: "Disabled", 3: "ExistingExternalUserSharingOnly"}

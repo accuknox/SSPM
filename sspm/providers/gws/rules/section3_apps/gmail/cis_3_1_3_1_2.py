@@ -74,10 +74,4 @@ class CIS_3_1_3_1_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify offline access to Gmail is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Gmail → User Settings\n"
-            "  3. Under Gmail web offline\n"
-            "  4. Ensure 'Enable Gmail web offline' is unchecked"
-        )
+        return self._manual()

@@ -73,11 +73,4 @@ class CIS_6_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify mailbox audit logging via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-Mailbox -ResultSize Unlimited | "
-            "Where-Object {$_.AuditEnabled -ne $true} | "
-            "Select-Object UserPrincipalName, AuditEnabled\n\n"
-            "Compliant: All mailboxes have AuditEnabled = True."
-        )
+        return self._manual()

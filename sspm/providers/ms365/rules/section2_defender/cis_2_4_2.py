@@ -76,10 +76,4 @@ class CIS_2_4_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Strict protection for priority accounts in Microsoft Defender portal:\n"
-            "  1. Go to https://security.microsoft.com\n"
-            "  2. Navigate to Email & Collaboration > Policies & Rules > "
-            "Threat policies > Preset security policies\n"
-            "  3. Verify priority accounts are included in the Strict protection policy"
-        )
+        return self._manual()
