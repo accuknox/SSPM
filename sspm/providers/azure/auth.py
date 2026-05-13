@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 
 ARM_SCOPE = ["https://management.azure.com/.default"]
 GRAPH_SCOPE = ["https://graph.microsoft.com/.default"]
+VAULT_SCOPE = ["https://vault.azure.net/.default"]
 
 
 class AzureAuth:
@@ -71,3 +72,9 @@ class AzureAuth:
 
     def graph_headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.graph_token()}"}
+
+    def vault_token(self) -> str:
+        return self._acquire(VAULT_SCOPE)
+
+    def vault_headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.vault_token()}"}

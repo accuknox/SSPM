@@ -47,17 +47,9 @@ class CIS_8_1_15(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        contacts = data.get("security_contacts")
+        contacts = data.get("security_contacts_v2")
         if contacts is None:
             return self._skip("Security contacts could not be retrieved.")
-
-        # Check if any contact has notificationsSources
-        any_has_sources = any(
-            "notificationsSources" in c.get("properties", {})
-            for c in contacts
-        )
-        if not any_has_sources:
-            return self._skip("Security contact notification sources could not be verified.")
 
         compliant = False
         for c in contacts:

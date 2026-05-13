@@ -59,24 +59,23 @@ class CIS_8_3_11(AzureRule):
         for vault_id, certs in certs_map.items():
             vault_label = vault_id.split("/")[-1] if "/" in vault_id else vault_id
             for cert in certs:
-                attrs = cert.get("properties", {}).get("attributes", {})
+                # Data-plane list response: attributes at top level, name in id URL
+                attrs = cert.get("attributes", {})
                 if not attrs.get("enabled", True):
                     continue  # Skip disabled certificates
                 exp = attrs.get("exp")
                 created = attrs.get("created")
+                cert_name = cert.get("id", "?").rstrip("/").rsplit("/", 1)[-1]
                 if exp is None or created is None:
-                    # Cannot determine validity; flag it
-                    offenders.append(f"{vault_label}/{cert.get('name', '?')} (missing timestamps)")
+                    offenders.append(f"{vault_label}/{cert_name} (missing timestamps)")
                     continue
                 validity_seconds = exp - created
                 if validity_seconds > _MAX_SECONDS:
                     validity_months = round(validity_seconds / _MONTH_SECONDS, 1)
-                    offenders.append(
-                        f"{vault_label}/{cert.get('name', '?')} ({validity_months} months)"
-                    )
+                    offenders.append(f"{vault_label}/{cert_name} ({validity_months} months)")
 
         evidence = [Evidence(
-            source="arm:Microsoft.KeyVault/vaults/certificates",
+            source="vault:certificates",
             data={"certificates_exceeding_12_months": offenders},
         )]
         if offenders:

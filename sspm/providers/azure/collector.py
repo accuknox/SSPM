@@ -47,14 +47,15 @@ Monitoring / Defender:
     "activity_log_alerts"              – list of microsoft.insights/activityLogAlerts dicts
     "app_insights_components"          – list of microsoft.insights/components dicts
     "defender_pricings"                – list of Microsoft.Security/pricings dicts
-    "security_contacts"                – list of Microsoft.Security/securityContacts dicts
+    "security_contacts"                – list of Microsoft.Security/securityContacts dicts (2020-01-01-preview)
+    "security_contacts_v2"             – same resource, 2023-12-01-preview (adds notificationsSources)
     "auto_provisioning_settings"       – list of Microsoft.Security/autoProvisioningSettings dicts
     "ddos_protection_plans"            – list of Microsoft.Network/ddosProtectionPlans dicts
 
 Key Vault (per-vault item metadata):
     "key_vault_keys"          – {vault_id: [key dicts]}  (ARM metadata, not data-plane values)
-    "key_vault_secrets"       – {vault_id: [secret dicts]}
-    "key_vault_certificates"  – {vault_id: [certificate dicts]}
+    "key_vault_secrets"       – {vault_id: [secret dicts]}  (ARM metadata)
+    "key_vault_certificates"  – {vault_id: [certificate dicts]}  (data-plane via vault.azure.net)
 """
 
 from __future__ import annotations
@@ -71,6 +72,7 @@ log = logging.getLogger(__name__)
 
 ARM_ROOT = "https://management.azure.com"
 GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
+VAULT_API_VERSION = "7.4"
 
 # API versions. Pinned to stable GA where possible.
 API_VERSIONS = {
@@ -86,6 +88,7 @@ API_VERSIONS = {
     "insights_alerts": "2020-10-01",
     "security": "2023-01-01",
     "security_contacts": "2020-01-01-preview",
+    "security_contacts_v2": "2023-12-01-preview",
     "security_pricings": "2024-01-01",
     "security_auto": "2017-08-01-preview",
     "databricks": "2023-02-01",
@@ -144,6 +147,7 @@ class AzureCollector:
         self._safe("app_insights_components", self._collect_app_insights)
         self._safe("defender_pricings", self._collect_defender_pricings)
         self._safe("security_contacts", self._collect_security_contacts)
+        self._safe("security_contacts_v2", self._collect_security_contacts_v2)
         self._safe("auto_provisioning_settings", self._collect_auto_provisioning)
         self._safe("databricks_workspaces", self._collect_databricks_workspaces)
         self._safe("key_vault_keys", self._collect_keyvault_keys)
@@ -184,6 +188,22 @@ class AzureCollector:
             items.extend(body.get("value", []))
             url = body.get("nextLink")
             params = None  # nextLink already has api-version
+        return items
+
+    def _vault_list(self, vault_base_url: str, path: str) -> list[dict[str, Any]]:
+        """GET a Key Vault data-plane endpoint and follow pagination."""
+        url = f"{vault_base_url.rstrip('/')}/{path}"
+        params: dict[str, Any] | None = {"api-version": VAULT_API_VERSION}
+        items: list[dict[str, Any]] = []
+        while url:
+            resp = self._client.get(
+                url, headers=self._auth.vault_headers(), params=params
+            )
+            resp.raise_for_status()
+            body = resp.json()
+            items.extend(body.get("value", []))
+            url = body.get("nextLink")
+            params = None
         return items
 
     def _graph_get(self, path: str) -> dict[str, Any]:
@@ -375,6 +395,14 @@ class AzureCollector:
         )
         self._data["security_contacts"] = items
 
+    def _collect_security_contacts_v2(self) -> None:
+        items = self._arm_list(
+            f"/subscriptions/{self._subscription_id}"
+            "/providers/Microsoft.Security/securityContacts",
+            API_VERSIONS["security_contacts_v2"],
+        )
+        self._data["security_contacts_v2"] = items
+
     def _collect_application_gateways(self) -> None:
         items = self._arm_list(
             f"/subscriptions/{self._subscription_id}"
@@ -459,13 +487,13 @@ class AzureCollector:
         fetch_attempted = 0
         for vault in vaults:
             vid = vault.get("id", "")
+            vault_uri = vault.get("properties", {}).get("vaultUri", "")
+            if not vault_uri:
+                continue
             fetch_attempted += 1
             try:
-                items = self._arm_list(f"{vid}/certificates", API_VERSIONS["keyvault_items"])
+                items = self._vault_list(vault_uri, "certificates")
                 result[vid] = items
             except Exception as exc:  # noqa: BLE001
                 log.debug("key vault certs fetch failed for %s: %s", vid, exc)
-        # If we tried to fetch from vaults but got nothing back, ARM doesn't
-        # support the certificate list endpoint for this tenant — set to None
-        # so that cis_8_3_11 skips rather than reporting a false pass.
         self._data["key_vault_certificates"] = result if result else (None if fetch_attempted else {})

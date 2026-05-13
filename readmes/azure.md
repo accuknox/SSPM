@@ -431,3 +431,54 @@ sspm report summary sspm-azure-report.sarif.json
 - **Audit scanner activity.** The app registration appears in **Entra ID sign-in logs** (non-interactive sign-ins). Review it periodically for unexpected token issuances or access patterns.
 
 - **Limit scope to one subscription at a time.** Assign `Reader` only on the specific subscription being scanned, not at the management-group or tenant root scope, to minimise blast radius if credentials are compromised.
+
+
+```
+Create App Registration from Azure Portal UI
+
+  Step 1 — Create the App Registration
+
+  1. Go to portal.azure.com
+  2. Search for Microsoft Entra ID in the top search bar → open it
+  3. Left sidebar → App registrations → + New registration
+  4. Fill in:
+    - Name: accuknox-sspm-scanner
+    - Supported account types: Accounts in this organizational directory only
+    - Redirect URI: leave blank
+  5. Click Register
+
+  ▎ Save the Application (client) ID and Directory (tenant) ID shown on the overview page.
+
+  ---
+  Step 2 — Create a client secret
+
+  1. In your new app → left sidebar → Certificates & secrets
+  2. + New client secret
+  3. Description: sspm-secret, Expires: 24 months
+  4. Click Add
+
+  ▎ Copy the Value immediately — it's hidden after you leave the page.
+
+  ---
+  Step 3 — Add Graph API permissions
+
+  1. Left sidebar → API permissions → + Add a permission
+  2. Select Microsoft Graph → Application permissions
+  3. Search and add each:
+    - Policy.Read.All
+    - Directory.Read.All
+    - RoleManagement.Read.Directory
+  4. Click Add permissions
+  5. Click Grant admin consent for [your tenant] → Yes
+
+  ---
+  Step 4 — Assign ARM roles at subscription scope
+  
+  1. Search for Subscriptions in the top bar → open 69e37648-...
+  2. Left sidebar → Access control (IAM) → + Add → Add role assignment
+  3. Assign Reader:
+    - Role tab: search Reader → select it → Next
+    - Members tab: + Select members → search accuknox-sspm-scanner → Select → Next → Review + assign
+  4. Repeat steps 2–3 for Security Reader
+  5. Repeat steps 2–3 for Key Vault Certificate User
+```
