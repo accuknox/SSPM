@@ -47,7 +47,13 @@ class CIS_7_8(AzureRule):
         if flow_logs is None:
             return self._skip("Flow logs could not be retrieved.")
         if not flow_logs:
-            return self._skip("No VNet flow logs are configured — nothing to evaluate.")
+            vnets = data.get("virtual_networks") or []
+            if not vnets:
+                return self._skip("No VNets found in subscription — nothing to evaluate.")
+            return self._fail(
+                f"No VNet flow logs configured for {len(vnets)} VNet(s) in the subscription.",
+                evidence=[Evidence(source="arm:flowLogs", data={"flow_logs_configured": 0, "vnets_count": len(vnets)})],
+            )
 
         offenders: list[str] = []
         for fl in flow_logs:

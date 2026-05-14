@@ -185,8 +185,12 @@ class AzureCollector:
             )
             resp.raise_for_status()
             body = resp.json()
-            items.extend(body.get("value", []))
-            url = body.get("nextLink")
+            if isinstance(body, list):
+                items.extend(body)
+                url = None
+            else:
+                items.extend(body.get("value", []))
+                url = body.get("nextLink")
             params = None  # nextLink already has api-version
         return items
 

@@ -1,7 +1,7 @@
 """CIS Azure 5.1.3 – Ensure 'multifactor authentication' is 'enabled' For All Users (Automated, L1)"""
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISControl, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.azure.rules.base import AzureRule
 from sspm.providers.base import CollectedData
@@ -45,10 +45,27 @@ class CIS_5_1_3(AzureRule):
     )
 
     async def check(self, data: CollectedData) -> "Finding":
-        # Per-user MFA state is only accessible via legacy MSOnline / Graph beta endpoints that
-        # require DelegatedAuthentication.ReadWrite.All and an admin user context.
-        # Graph application permissions do not expose this data; the scanner cannot collect it.
+        # Direct per-user MFA state requires AuditLog.Read.All which is not available under
+        # application permissions. Use Security Defaults as an authoritative proxy: when enabled,
+        # Microsoft enforces MFA for all users on the tenant.
+        security_defaults = data.get("security_defaults")
+        if security_defaults is None:
+            return self._skip("Security defaults policy could not be retrieved.")
+
+        sd_enabled = security_defaults.get("isEnabled", False)
+        evidence = [Evidence(
+            source="graph:identitySecurityDefaultsEnforcementPolicy",
+            data={"security_defaults_enabled": sd_enabled},
+        )]
+
+        if sd_enabled:
+            return self._pass(
+                "Security Defaults is enabled — MFA is enforced for all users by Microsoft.",
+                evidence=evidence,
+            )
+
         return self._skip(
-            "Per-user MFA state is not exposed through Graph application permissions; "
-            "this data is not collected by the scanner."
+            "Security Defaults is disabled and per-user MFA state requires AuditLog.Read.All "
+            "to enumerate directly. Verify via Entra admin center → Users → Per-user MFA, "
+            "or ensure a Conditional Access policy enforces MFA for all users.",
         )
