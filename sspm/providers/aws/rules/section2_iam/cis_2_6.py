@@ -59,12 +59,9 @@ class CIS_2_6(AWSRule):
         mfa_enabled = account_summary.get("AccountMFAEnabled", 0) == 1
 
         if not mfa_enabled:
-            return self._fail(
-                "Root account does not have MFA enabled at all. Enable hardware MFA immediately.",
-                evidence=[Evidence(
-                    source="iam:GetAccountSummary",
-                    data={"AccountMFAEnabled": 0},
-                )],
+            return self._manual(
+                "Root account does not have MFA enabled at all. "
+                "Manually verify and enable hardware MFA for the root account.",
             )
 
         # Check if root is using a virtual MFA device
@@ -84,9 +81,9 @@ class CIS_2_6(AWSRule):
         )]
 
         if root_has_virtual:
-            return self._fail(
-                "Root account uses a virtual MFA device. Hardware MFA is required for Level 2 compliance.",
-                evidence=evidence,
+            return self._manual(
+                "Root account appears to use a virtual MFA device. "
+                "Manually verify and replace with a hardware MFA device for Level 2 compliance.",
             )
         return self._pass(
             "Root account MFA appears to be hardware-based (not found in virtual MFA device list).",

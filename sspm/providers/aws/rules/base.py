@@ -134,9 +134,9 @@ class AWSRule(BaseRule):
                     break
 
         if not qualified_log_group:
-            return self._fail(
+            return self._manual(
                 f"No active multi-region CloudTrail with CloudWatch Logs and all management "
-                f"events found. Cannot verify {rule_description}.",
+                f"events found. Manually verify {rule_description}.",
             )
 
         # Step 2: find a metric filter matching all keywords
@@ -151,13 +151,9 @@ class AWSRule(BaseRule):
                     break
 
         if not matched_metric:
-            return self._fail(
+            return self._manual(
                 f"No CloudWatch metric filter matching {rule_description} found on log group "
-                f"'{qualified_log_group}'.",
-                evidence=[Evidence(
-                    source="logs:DescribeMetricFilters",
-                    data={"log_group": qualified_log_group, "filters_found": len(filters_for_group)},
-                )],
+                f"'{qualified_log_group}'. Manually verify the metric filter and alarm are configured.",
             )
 
         # Step 3: find an alarm on the metric
@@ -165,9 +161,9 @@ class AWSRule(BaseRule):
             (a for a in alarms if a.get("MetricName") == matched_metric), None
         )
         if not matched_alarm:
-            return self._fail(
+            return self._manual(
                 f"No CloudWatch alarm found for metric '{matched_metric}' "
-                f"(filter: {rule_description}).",
+                f"({rule_description}). Manually verify a CloudWatch alarm and SNS subscription exist.",
             )
 
         # Step 4: check SNS subscription
@@ -183,9 +179,9 @@ class AWSRule(BaseRule):
                 break
 
         if not has_active_sub:
-            return self._fail(
+            return self._manual(
                 f"CloudWatch alarm '{matched_alarm.get('AlarmName')}' for {rule_description} "
-                f"has no active SNS subscriptions.",
+                f"has no confirmed active SNS subscriptions. Manually verify a notification endpoint is subscribed.",
             )
 
         return self._pass(

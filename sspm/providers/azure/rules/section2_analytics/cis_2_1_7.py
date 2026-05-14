@@ -72,6 +72,5 @@ class CIS_2_1_7(AzureRule):
 
         return self._skip(
             "Databricks diagnostic log delivery requires per-workspace diagnostic settings "
-            "that are not yet collected by this scanner. Review each workspace manually via "
-            "Azure Portal → Databricks workspace → Monitoring → Diagnostic settings."
+            "that are not yet collected by this scanner."
         )

@@ -14,7 +14,7 @@ class CIS_5_1_3(AzureRule):
         title="Ensure that 'multifactor authentication' is 'enabled' for all users",
         section="5.1 Security Defaults (Per-User MFA)",
         benchmark="CIS Microsoft Azure Foundations Benchmark v6.0.0",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.AZURE_L1],
         severity=Severity.HIGH,
         description=(
@@ -47,7 +47,8 @@ class CIS_5_1_3(AzureRule):
     async def check(self, data: CollectedData) -> "Finding":
         # Per-user MFA state is only accessible via legacy MSOnline / Graph beta endpoints that
         # require DelegatedAuthentication.ReadWrite.All and an admin user context.
-        return self._manual(
+        # Graph application permissions do not expose this data; the scanner cannot collect it.
+        return self._skip(
             "Per-user MFA state is not exposed through Graph application permissions; "
-            "verify manually via Entra admin center → Users → Per-user MFA."
+            "this data is not collected by the scanner."
         )
