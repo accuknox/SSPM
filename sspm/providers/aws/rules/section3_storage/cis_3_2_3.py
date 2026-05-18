@@ -56,6 +56,8 @@ class CIS_3_2_3(AWSRule):
                 "Could not retrieve RDS instances. "
                 "Ensure the rds_instances collector is enabled."
             )
+        if not instances:
+            return self._skip("No RDS instances found in account.")
 
         violations = []
         for inst in instances:

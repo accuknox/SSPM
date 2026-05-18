@@ -86,6 +86,8 @@ class CIS_6_2(AWSRule):
                 "Could not retrieve Network ACLs. "
                 "Ensure the ec2_nacls collector is enabled."
             )
+        if not nacls:
+            return self._skip("No Network ACLs found in account.")
 
         violations = []
         for nacl in nacls:

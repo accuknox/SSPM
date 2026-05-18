@@ -56,6 +56,8 @@ class CIS_2_17(AWSRule):
                 "Could not retrieve SSL/TLS certificates from IAM. "
                 "Ensure the ssl_certificates collector is enabled."
             )
+        if not certificates:
+            return self._skip("No SSL/TLS certificates found in IAM.")
 
         now = datetime.now(timezone.utc)
         expired = []
