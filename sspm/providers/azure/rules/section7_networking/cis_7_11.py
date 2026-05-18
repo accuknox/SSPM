@@ -51,7 +51,7 @@ class CIS_7_11(AzureRule):
         if vnets is None:
             return self._skip("Virtual networks could not be retrieved.")
         if not vnets:
-            return self._pass("No virtual networks found in subscription.")
+            return self._skip("No virtual networks found in subscription.")
 
         offenders: list[str] = []
         for vnet in vnets:

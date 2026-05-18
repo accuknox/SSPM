@@ -45,7 +45,7 @@ class CIS_8_3_6(AzureRule):
         if vaults is None:
             return self._skip("Key Vaults could not be retrieved.")
         if not vaults:
-            return self._pass("No Key Vaults in subscription.")
+            return self._skip("No Key Vaults in subscription.")
 
         offenders = [
             v.get("name", "?")

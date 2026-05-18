@@ -50,7 +50,7 @@ class CIS_6_1_1_4(AzureRule):
         if vaults is None:
             return self._skip("Key Vaults could not be retrieved.")
         if not vaults:
-            return self._pass("No Key Vaults in subscription — nothing to audit.")
+            return self._skip("No Key Vaults in subscription — nothing to audit.")
 
         offenders: list[str] = []
         for v in vaults:

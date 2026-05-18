@@ -50,7 +50,7 @@ class CIS_9_3_2_1(AzureRule):
         if accounts is None:
             return self._skip("Storage accounts could not be retrieved.")
         if not accounts:
-            return self._pass("No storage accounts in subscription.")
+            return self._skip("No storage accounts in subscription.")
 
         offenders: list[str] = []
         for sa in accounts:

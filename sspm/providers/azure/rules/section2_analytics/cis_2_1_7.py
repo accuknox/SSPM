@@ -68,7 +68,7 @@ class CIS_2_1_7(AzureRule):
         if workspaces is None:
             return self._skip("Databricks workspaces could not be retrieved.")
         if not workspaces:
-            return self._pass("No Databricks workspaces in subscription.")
+            return self._skip("No Databricks workspaces in subscription.")
 
         return self._skip(
             "Databricks diagnostic log delivery requires per-workspace diagnostic settings "

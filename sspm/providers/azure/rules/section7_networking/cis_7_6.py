@@ -57,7 +57,7 @@ class CIS_7_6(AzureRule):
             data={"missing_regions": missing},
         )]
         if not vnet_regions:
-            return self._pass("No VNets exist — no regions require Network Watcher.")
+            return self._skip("No VNets exist — no regions require Network Watcher.")
         if missing:
             return self._fail(
                 f"Network Watcher missing in {len(missing)} region(s) with VNets: "
