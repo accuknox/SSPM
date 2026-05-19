@@ -162,6 +162,10 @@ def scan_gws(
               help="Human-readable label for the account (defaults to account ID).")
 @click.option("--profile-filter", "profile_filter", default=None,
               help='CIS profile filter: "AWS Level 1" or "AWS Level 2".')
+@click.option("--v5", "use_v5", is_flag=True, default=False,
+              help="Scan against CIS AWS Foundations Benchmark v5.0.0.")
+@click.option("--v7", "use_v7", is_flag=True, default=False,
+              help="Scan against CIS AWS Foundations Benchmark v7.0.0 (legacy rules).")
 @click.option("--rule", "rule_ids", multiple=True, help="Limit scan to specific rule IDs (repeatable).")
 @click.option("--output", "-o", default="sspm-aws-report", show_default=True,
               help="Output file stem. Produces <stem>.html and <stem>.sarif.json.")
@@ -176,13 +180,19 @@ def scan_aws(
     region: str,
     account_alias: str,
     profile_filter: str | None,
+    use_v5: bool,
+    use_v7: bool,
     rule_ids: tuple[str, ...],
     output: str,
     no_html: bool,
     no_sarif: bool,
     verbose: bool,
 ) -> None:
-    """Scan an AWS account against CIS AWS Foundations Benchmark v1.2.0."""
+    """Scan an AWS account against the CIS AWS Foundations Benchmark.
+
+    Use --v5 to scan against v5.0.0 rules, or --v7 for legacy v7.0.0 rules.
+    Without either flag, all registered AWS rules are run.
+    """
     import logging
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -191,6 +201,16 @@ def scan_aws(
     from sspm.core.html_reporter import write_html
     from sspm.core.reporter import write_sarif
     from sspm.providers.aws.provider import AWSProvider
+
+    if use_v5 and use_v7:
+        console.print("[red]Error:[/red] --v5 and --v7 are mutually exclusive.")
+        sys.exit(1)
+
+    benchmark_version: str | None = None
+    if use_v5:
+        benchmark_version = "v5.0.0"
+    elif use_v7:
+        benchmark_version = ""
 
     provider = AWSProvider(
         access_key_id=access_key_id or None,
@@ -205,9 +225,14 @@ def scan_aws(
         provider=provider,
         profile_filter=profile_filter,
         rule_ids=list(rule_ids) if rule_ids else None,
+        benchmark_version=benchmark_version,
     )
 
-    console.print(f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (AWS)")
+    bv_label = "v5.0.0" if use_v5 else ("v7.0.0 (legacy)" if use_v7 else "all")
+    console.print(
+        f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (AWS) "
+        f"[dim]benchmark: {bv_label}[/dim]"
+    )
     if profile_filter:
         console.print(f"  Profile filter: [yellow]{profile_filter}[/yellow]")
 
@@ -246,6 +271,10 @@ def scan_aws(
               help="Human-readable label for the subscription (defaults to the subscription ID).")
 @click.option("--profile", "profile_filter", default=None,
               help='CIS profile filter: "Azure Level 1" or "Azure Level 2".')
+@click.option("--v4", "use_v4", is_flag=True, default=False,
+              help="Scan against CIS Microsoft Azure Foundations Benchmark v4.0.0.")
+@click.option("--v6", "use_v6", is_flag=True, default=False,
+              help="Scan against CIS Microsoft Azure Foundations Benchmark v6.0.0 (current/legacy rules).")
 @click.option("--rule", "rule_ids", multiple=True, help="Limit scan to specific rule IDs (repeatable).")
 @click.option("--output", "-o", default="sspm-azure-report", show_default=True,
               help="Output file stem. Produces <stem>.html and <stem>.sarif.json.")
@@ -259,13 +288,19 @@ def scan_azure(
     subscription_id: str,
     subscription_label: str,
     profile_filter: str | None,
+    use_v4: bool,
+    use_v6: bool,
     rule_ids: tuple[str, ...],
     output: str,
     no_html: bool,
     no_sarif: bool,
     verbose: bool,
 ) -> None:
-    """Scan an Azure subscription against CIS Microsoft Azure Foundations Benchmark v6.0.0."""
+    """Scan an Azure subscription against the CIS Microsoft Azure Foundations Benchmark.
+
+    Use --v4 to scan against v4.0.0 rules, or --v6 for the current v6.0.0 rules.
+    Without either flag, all registered Azure rules are run.
+    """
     import logging
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -274,6 +309,16 @@ def scan_azure(
     from sspm.core.html_reporter import write_html
     from sspm.core.reporter import write_sarif
     from sspm.providers.azure.provider import AzureProvider
+
+    if use_v4 and use_v6:
+        console.print("[red]Error:[/red] --v4 and --v6 are mutually exclusive.")
+        sys.exit(1)
+
+    benchmark_version: str | None = None
+    if use_v4:
+        benchmark_version = "v4.0.0"
+    elif use_v6:
+        benchmark_version = ""
 
     provider = AzureProvider(
         tenant_id=tenant_id,
@@ -287,9 +332,14 @@ def scan_azure(
         provider=provider,
         profile_filter=profile_filter,
         rule_ids=list(rule_ids) if rule_ids else None,
+        benchmark_version=benchmark_version,
     )
 
-    console.print(f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (Azure)")
+    bv_label = "v4.0.0" if use_v4 else ("v6.0.0 (current)" if use_v6 else "all")
+    console.print(
+        f"[bold]AccuKnox SSPM[/bold] – scanning [cyan]{provider.target}[/cyan] (Azure) "
+        f"[dim]benchmark: {bv_label}[/dim]"
+    )
     if profile_filter:
         console.print(f"  Profile filter: [yellow]{profile_filter}[/yellow]")
 
@@ -409,10 +459,32 @@ def rules() -> None:
 
 
 @rules.command("list")
-@click.option("--provider", default=None, help="Filter by provider ID (e.g. ms365).")
+@click.option("--provider", default=None, help="Filter by provider ID (e.g. aws, azure, ms365).")
 @click.option("--profile", default=None, help="Filter by CIS profile.")
-def rules_list(provider: str | None, profile: str | None) -> None:
+@click.option("--v5", "use_v5", is_flag=True, default=False,
+              help="Show only CIS AWS v5.0.0 rules.")
+@click.option("--v7", "use_v7", is_flag=True, default=False,
+              help="Show only legacy CIS AWS v7.0.0 rules.")
+@click.option("--v4", "use_v4", is_flag=True, default=False,
+              help="Show only CIS Azure v4.0.0 rules.")
+@click.option("--v6", "use_v6", is_flag=True, default=False,
+              help="Show only legacy CIS Azure v6.0.0 rules.")
+def rules_list(
+    provider: str | None,
+    profile: str | None,
+    use_v5: bool,
+    use_v7: bool,
+    use_v4: bool,
+    use_v6: bool,
+) -> None:
     """List all registered security rules."""
+    if use_v5 and use_v7:
+        console.print("[red]Error:[/red] --v5 and --v7 are mutually exclusive.")
+        sys.exit(1)
+    if use_v4 and use_v6:
+        console.print("[red]Error:[/red] --v4 and --v6 are mutually exclusive.")
+        sys.exit(1)
+
     # Trigger auto-discovery for known providers
     if not provider or provider == "ms365":
         from sspm.providers.ms365.provider import MS365Provider  # noqa: F401
@@ -437,9 +509,19 @@ def rules_list(provider: str | None, profile: str | None) -> None:
     else:
         rule_list = registry.all_rules()
 
+    if use_v5:
+        rule_list = [r for r in rule_list if r.metadata.benchmark_version == "v5.0.0"]
+    elif use_v7:
+        rule_list = [r for r in rule_list if r.metadata.benchmark_version == ""]
+    elif use_v4:
+        rule_list = [r for r in rule_list if r.metadata.benchmark_version == "v4.0.0"]
+    elif use_v6:
+        rule_list = [r for r in rule_list if r.metadata.benchmark_version == ""]
+
     table = Table(title=f"Registered Rules ({len(rule_list)} total)", show_lines=False)
     table.add_column("ID", style="cyan", no_wrap=True)
-    table.add_column("Title", max_width=50)
+    table.add_column("Title", max_width=48)
+    table.add_column("Ver", justify="center")
     table.add_column("Status", justify="center")
     table.add_column("Severity", justify="center")
     table.add_column("Profiles")
@@ -458,9 +540,11 @@ def rules_list(provider: str | None, profile: str | None) -> None:
         status_style = status_styles.get(m.assessment_status.value, "")
         sev_style = sev_styles.get(m.severity.value, "")
         profiles = ", ".join(p.value for p in m.profiles)
+        ver_label = m.benchmark_version or "[dim]legacy[/dim]"
         table.add_row(
             m.id,
             m.title,
+            ver_label,
             f"[{status_style}]{m.assessment_status.value}[/{status_style}]",
             f"[{sev_style}]{m.severity.value}[/{sev_style}]",
             profiles,

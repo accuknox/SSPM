@@ -117,6 +117,9 @@ class RuleMetadata:
     references: list[str] = field(default_factory=list)
     cis_controls: list[CISControl] = field(default_factory=list)
 
+    # --- Benchmark version (e.g. "v5.0.0"); empty string = legacy/unversioned ---
+    benchmark_version: str = ""
+
     # --- Tagging (free-form, for filtering) ---
     tags: list[str] = field(default_factory=list)
 

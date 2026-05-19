@@ -66,3 +66,4 @@ class AzureProvider(BaseProvider):
     def _autodiscover() -> None:
         from sspm.core.registry import registry
         registry.autodiscover("sspm.providers.azure.rules")
+        import sspm.providers.azure.rules.v4_rules  # noqa: F401

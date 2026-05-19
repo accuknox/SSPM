@@ -45,10 +45,12 @@ class ScanEngine:
         provider,
         profile_filter: str | None = None,
         rule_ids: list[str] | None = None,
+        benchmark_version: str | None = None,
     ) -> None:
         self.provider = provider
         self.profile_filter = profile_filter
         self.rule_ids = rule_ids
+        self.benchmark_version = benchmark_version
 
     async def scan(self) -> ScanResult:
         result = ScanResult(
@@ -65,6 +67,12 @@ class ScanEngine:
             rules = [r for r in rules if r.provider == self.provider.provider_id]
         else:
             rules = registry.rules_for_provider(self.provider.provider_id)
+
+        # Filter by benchmark version when specified
+        if self.benchmark_version is not None:
+            rules = [r for r in rules if r.metadata.benchmark_version == self.benchmark_version]
+            if rules:
+                result.benchmark = rules[0].metadata.benchmark
 
         if not rules:
             log.warning("No rules matched the selection criteria.")
