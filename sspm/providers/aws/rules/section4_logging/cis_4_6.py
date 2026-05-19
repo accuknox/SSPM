@@ -51,6 +51,8 @@ class CIS_4_6(AWSRule):
         keys = data.get("kms_keys")
         if keys is None:
             return self._skip("Could not retrieve KMS keys.")
+        if not keys:
+            return self._skip("No KMS keys found in account.")
 
         # Filter to customer-managed symmetric keys only
         violations = []

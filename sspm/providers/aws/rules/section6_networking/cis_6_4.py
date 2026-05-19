@@ -72,6 +72,8 @@ class CIS_6_4(AWSRule):
         sgs = data.get("ec2_security_groups")
         if sgs is None:
             return self._skip("Could not retrieve EC2 security groups.")
+        if not sgs:
+            return self._skip("No EC2 security groups found in account.")
 
         violations = []
         for sg in sgs:

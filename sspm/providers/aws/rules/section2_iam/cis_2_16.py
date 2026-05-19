@@ -58,6 +58,8 @@ class CIS_2_16(AWSRule):
         instances = data.get("ec2_instances")
         if instances is None:
             return self._skip("Could not retrieve EC2 instances.")
+        if not instances:
+            return self._skip("No EC2 instances found in account.")
 
         violations = []
         for inst in instances:

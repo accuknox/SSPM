@@ -55,6 +55,8 @@ class CIS_2_18(AWSRule):
                 "Could not retrieve IAM Access Analyzer data. "
                 "Ensure the access_analyzers collector is enabled."
             )
+        if not analyzers:
+            return self._skip("No IAM Access Analyzer data found — no regions checked.")
 
         # analyzers is expected to be {region: [analyzer_dicts]}
         regions_without_analyzer = []

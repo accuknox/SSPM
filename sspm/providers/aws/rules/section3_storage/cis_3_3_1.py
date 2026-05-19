@@ -58,6 +58,8 @@ class CIS_3_3_1(AWSRule):
                 "Could not retrieve EFS file systems. "
                 "Ensure the efs_file_systems collector is enabled."
             )
+        if not file_systems:
+            return self._skip("No EFS file systems found in account.")
 
         violations = []
         for fs in file_systems:

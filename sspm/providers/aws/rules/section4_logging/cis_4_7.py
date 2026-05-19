@@ -57,6 +57,8 @@ class CIS_4_7(AWSRule):
             return self._skip("Could not retrieve VPC data.")
         if flow_logs is None:
             return self._skip("Could not retrieve VPC flow logs data.")
+        if not vpcs:
+            return self._skip("No VPCs found in account.")
 
         # Build set of VPC IDs that have active flow logs
         covered_vpcs: set[str] = set()

@@ -57,6 +57,8 @@ class CIS_6_1_1(AWSRule):
                 "Could not retrieve EBS encryption by default settings. "
                 "Ensure the ebs_encryption_by_default collector is enabled."
             )
+        if not ebs_encryption:
+            return self._skip("No EBS encryption by default data found — no regions checked.")
 
         # Expected format: {region: {"EbsEncryptionByDefault": True/False}}
         violations = []

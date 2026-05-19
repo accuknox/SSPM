@@ -72,6 +72,8 @@ class CIS_3_1_1(AWSRule):
         bucket_policies = data.get("s3_all_bucket_policies") or data.get("s3_bucket_policies")
         if bucket_policies is None:
             return self._skip("Could not retrieve S3 bucket policies.")
+        if not bucket_policies:
+            return self._skip("No S3 buckets found in account.")
 
         violations = []
         compliant = []

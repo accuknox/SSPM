@@ -57,6 +57,8 @@ class CIS_2_13(AWSRule):
         users = data.get("iam_users")
         if users is None:
             return self._skip("Could not retrieve IAM users.")
+        if not users:
+            return self._skip("No IAM users found in account.")
 
         violations = []
         for user in users:
