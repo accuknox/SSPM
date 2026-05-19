@@ -54,6 +54,8 @@ class CIS_8_3_11(AzureRule):
         certs_map = data.get("key_vault_certificates")
         if certs_map is None:
             return self._skip("Key vault certificates metadata could not be retrieved.")
+        if not certs_map:
+            return self._skip("No Key Vaults in subscription.")
 
         offenders: list[str] = []
         for vault_id, certs in certs_map.items():

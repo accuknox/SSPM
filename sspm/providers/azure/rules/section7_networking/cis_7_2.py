@@ -45,6 +45,8 @@ class CIS_7_2(AzureRule):
         nsgs = data.get("network_security_groups")
         if nsgs is None:
             return self._skip("Network security groups could not be retrieved.")
+        if not nsgs:
+            return self._skip("No Network Security Groups found in subscription.")
         offenders = find_offending_nsgs(nsgs, target_port=22)
         evidence = [Evidence(source="arm:networkSecurityGroups", data={"offenders": offenders})]
         if offenders:

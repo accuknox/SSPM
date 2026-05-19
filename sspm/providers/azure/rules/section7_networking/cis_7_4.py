@@ -50,6 +50,8 @@ class CIS_7_4(AzureRule):
         nsgs = data.get("network_security_groups")
         if nsgs is None:
             return self._skip("Network security groups could not be retrieved.")
+        if not nsgs:
+            return self._skip("No Network Security Groups found in subscription.")
 
         offenders_80 = find_offending_nsgs(nsgs, target_port=80, protocols=("tcp", "*"))
         offenders_443 = find_offending_nsgs(nsgs, target_port=443, protocols=("tcp", "*"))

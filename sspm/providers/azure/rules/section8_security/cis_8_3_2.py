@@ -46,6 +46,8 @@ class CIS_8_3_2(AzureRule):
 
     async def check(self, data: CollectedData) -> "Finding":
         vaults = data.get("key_vaults") or []
+        if not vaults:
+            return self._skip("No Key Vaults in subscription.")
         keys_map = data.get("key_vault_keys")
         if keys_map is None:
             return self._skip("Key vault keys metadata could not be retrieved.")

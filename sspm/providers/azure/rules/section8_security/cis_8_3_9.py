@@ -49,6 +49,8 @@ class CIS_8_3_9(AzureRule):
         keys_map = data.get("key_vault_keys")
         if keys_map is None:
             return self._skip("Key vault keys metadata could not be retrieved.")
+        if not keys_map:
+            return self._skip("No Key Vaults in subscription.")
 
         offenders: list[str] = []
         for vault_id, keys in keys_map.items():
