@@ -21,7 +21,7 @@ Rules present in v6.0.0 but absent from v4.0.0 are skipped:
 
 from __future__ import annotations
 
-from sspm.core.models import AssessmentStatus, CISProfile, RuleMetadata, Severity
+from sspm.core.models import AssessmentStatus, CISControl, CISProfile, Evidence, RuleMetadata, Severity
 from sspm.core.registry import registry
 from sspm.providers.azure.rules.base import AzureRule
 
@@ -188,7 +188,83 @@ _v4(CIS_2_1_4, "azure-cis-v4-3.1.4", "3.1 Azure Databricks", _MANUAL)  # Manual 
 _v4(CIS_2_1_5, "azure-cis-v4-3.1.5", "3.1 Azure Databricks", _MANUAL)  # Manual in v4
 _v4(CIS_2_1_6, "azure-cis-v4-3.1.6", "3.1 Azure Databricks", _MANUAL)  # Manual in v4
 _v4(CIS_2_1_7, "azure-cis-v4-3.1.7", "3.1 Azure Databricks", _MANUAL)  # Manual in v4
-_v4(CIS_2_1_8, "azure-cis-v4-3.1.8", "3.1 Azure Databricks")
+def _register_3_1_8() -> None:
+    """3.1.8 is Automated + L2 in v4 (base class is Manual + L1 in v6)."""
+    bm = CIS_2_1_8.metadata
+    meta = RuleMetadata(
+        id="azure-cis-v4-3.1.8",
+        title="Ensure that data at rest and in transit is encrypted in Azure Databricks using customer managed keys (CMK)",
+        section="3.1 Azure Databricks",
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L2],
+        severity=bm.severity,
+        description=(
+            "Azure Databricks encrypts data in transit using TLS 1.2+. By default, data at rest "
+            "is encrypted using Microsoft-managed keys. Organizations with stricter needs should "
+            "enable customer-managed keys (CMK) for managed disks and managed services via "
+            "Azure Key Vault."
+        ),
+        rationale=bm.rationale,
+        impact=(
+            "Enabling CMK encryption requires additional configuration. Key management introduces "
+            "maintenance overhead (rotation, revocation, lifecycle management). Potential access "
+            "issues will be encountered if keys are deleted or rotated incorrectly."
+        ),
+        audit_procedure=(
+            "ARM: GET /subscriptions/{subscriptionId}/providers/Microsoft.Databricks/workspaces "
+            "— for each workspace verify "
+            "properties.encryption.entities.managedDisk.keySource == 'Microsoft.Keyvault' and "
+            "properties.encryption.entities.managedServices.keySource == 'Microsoft.Keyvault'."
+        ),
+        remediation=(
+            "az databricks workspace update --name <name> --resource-group <rg> "
+            "--key-source 'Microsoft.KeyVault' --key-name <key-name> --keyvault-uri <uri>. "
+            "Also configure managed services CMK via the workspace Encryption settings."
+        ),
+        default_value=bm.default_value,
+        references=list(bm.references),
+        cis_controls=[
+            CISControl(version="v8", control_id="3.11", title="Encrypt Sensitive Data at Rest", ig1=False, ig2=True, ig3=True),
+            CISControl(version="v8", control_id="3.10", title="Encrypt Sensitive Data in Transit", ig1=False, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        workspaces = data.get("databricks_workspaces")
+        if workspaces is None:
+            return self._skip("Databricks workspaces could not be retrieved.")
+        if not workspaces:
+            return self._skip("No Databricks workspaces in subscription.")
+        offenders: list[str] = []
+        for ws in workspaces:
+            name = ws.get("name", ws.get("id", "unknown"))
+            entities = (ws.get("properties") or {}).get("encryption", {}).get("entities", {})
+            disk_src = ((entities.get("managedDisk") or {}).get("keySource") or "").lower()
+            svc_src = ((entities.get("managedServices") or {}).get("keySource") or "").lower()
+            if disk_src != "microsoft.keyvault" or svc_src != "microsoft.keyvault":
+                offenders.append(name)
+        evidence = [Evidence(
+            source="arm:Microsoft.Databricks/workspaces",
+            data={"total": len(workspaces), "without_cmk": len(offenders), "offenders": offenders},
+        )]
+        if offenders:
+            return self._fail(
+                f"{len(offenders)} Databricks workspace(s) lack CMK encryption on managed disks "
+                f"and/or managed services: {', '.join(offenders)}.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"All {len(workspaces)} Databricks workspace(s) have CMK encryption enabled.",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_3_1_8", (CIS_2_1_8,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_3_1_8()
 # 2.1.9–2.1.12 were added in v6 and have no v4 equivalent
 
 # ---------------------------------------------------------------------------
@@ -295,7 +371,102 @@ from sspm.providers.azure.rules.section6_logging.cis_6_2 import CIS_6_2
 _DIAG = "7.1.1 Configuring Diagnostic Settings"
 _v4(CIS_6_1_1_1, "azure-cis-v4-7.1.1.1", _DIAG, _MANUAL)  # Manual in v4
 _v4(CIS_6_1_1_2, "azure-cis-v4-7.1.1.2", _DIAG)
-_v4(CIS_6_1_1_3, "azure-cis-v4-7.1.1.3", _DIAG)
+def _register_7_1_1_3() -> None:
+    """7.1.1.3 is Automated + L2 in v4 (base class is Manual + L1 in v6)."""
+    bm = CIS_6_1_1_3.metadata
+    meta = RuleMetadata(
+        id="azure-cis-v4-7.1.1.3",
+        title="Ensure the storage account containing the container with activity logs is encrypted with Customer Managed Key (CMK)",
+        section=_DIAG,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L2],
+        severity=bm.severity,
+        description=(
+            "Storage accounts with activity log exports can be configured to use Customer "
+            "Managed Keys (CMK). Configuring CMK provides additional confidentiality controls "
+            "on log data."
+        ),
+        rationale=bm.rationale,
+        impact=bm.impact,
+        audit_procedure=(
+            "1. GET /subscriptions/<id>/providers/Microsoft.Insights/diagnosticSettings — "
+            "collect all storageAccountId values. "
+            "2. For each storage account check properties.encryption.keySource == "
+            "'Microsoft.Keyvault' and keyVaultProperties is not null."
+        ),
+        remediation=(
+            "az storage account update --name <name> --resource-group <rg> "
+            "--encryption-key-source Microsoft.Keyvault "
+            "--encryption-key-vault <Key Vault URI> "
+            "--encryption-key-name <KeyName> --encryption-key-version <Key Version>."
+        ),
+        default_value="By default, keySource is set to Microsoft.Storage.",
+        references=[
+            "https://learn.microsoft.com/en-us/azure/storage/common/customer-managed-keys-overview",
+            "https://learn.microsoft.com/en-us/azure/azure-monitor/essentials/activity-log?tabs=cli#managing-legacy-log-profiles",
+        ],
+        cis_controls=list(bm.cis_controls),
+    )
+
+    async def _check(self, data):
+        settings = data.get("activity_log_diagnostic_settings")
+        if settings is None:
+            return self._skip("Activity log diagnostic settings could not be retrieved.")
+        storage_ids: set[str] = set()
+        for s in settings:
+            sa_id = ((s.get("properties") or {}).get("storageAccountId") or "")
+            if sa_id:
+                storage_ids.add(sa_id.lower())
+        if not storage_ids:
+            return self._skip(
+                "No storage account destinations found in activity log diagnostic settings."
+            )
+        accounts = data.get("storage_accounts") or []
+        sa_map = {sa.get("id", "").lower(): sa for sa in accounts}
+        offenders: list[str] = []
+        skipped: list[str] = []
+        for sa_id in storage_ids:
+            sa = sa_map.get(sa_id)
+            if sa is None:
+                skipped.append(sa_id)
+                continue
+            enc = (sa.get("properties") or {}).get("encryption") or {}
+            key_source = (enc.get("keySource") or "").lower()
+            kv_props = enc.get("keyVaultProperties") or {}
+            if key_source != "microsoft.keyvault" or not kv_props:
+                offenders.append(sa.get("name", sa_id))
+        evidence = [Evidence(
+            source="arm:storageAccounts+diagnosticSettings",
+            data={
+                "activity_log_storage_accounts": len(storage_ids),
+                "without_cmk": offenders,
+                "not_found_in_inventory": skipped,
+            },
+        )]
+        if skipped and not offenders:
+            return self._skip(
+                f"Could not retrieve details for {len(skipped)} storage account(s) used by "
+                "activity log diagnostic settings — manual verification required."
+            )
+        if offenders:
+            return self._fail(
+                f"{len(offenders)} storage account(s) used for activity log archival are not "
+                f"encrypted with CMK: {', '.join(offenders)}.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"All {len(storage_ids)} storage account(s) used for activity log archival are "
+            "encrypted with a Customer Managed Key.",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_7_1_1_3", (CIS_6_1_1_3,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_7_1_1_3()
 _v4(CIS_6_1_1_4, "azure-cis-v4-7.1.1.4", _DIAG)
 _v4(CIS_6_1_1_5, "azure-cis-v4-7.1.1.5", _DIAG)
 # 7.1.1.6: AppService HTTP logs (Automated) — v6 has no direct equivalent at this position
