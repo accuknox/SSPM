@@ -309,7 +309,46 @@ _v5(CIS_4_1, "aws-cis-v5-3.1", _LOG)
 _v5(CIS_4_2, "aws-cis-v5-3.2", _LOG)
 _v5(CIS_4_3, "aws-cis-v5-3.3", _LOG)
 _v5(CIS_4_4, "aws-cis-v5-3.4", _LOG)
-_v5(CIS_4_5, "aws-cis-v5-3.5", _LOG)
+
+# 3.5: override to skip (not fail) when no trails exist — absence of the resource
+# means the check cannot be evaluated, not that it failed.
+_bm_3_5 = CIS_4_5.metadata
+_meta_3_5 = RuleMetadata(
+    id="aws-cis-v5-3.5",
+    title=_bm_3_5.title,
+    section=_LOG,
+    benchmark=_V5_BENCHMARK,
+    benchmark_version=_V5_VERSION,
+    assessment_status=_bm_3_5.assessment_status,
+    profiles=list(_bm_3_5.profiles),
+    severity=_bm_3_5.severity,
+    description=_bm_3_5.description,
+    rationale=_bm_3_5.rationale,
+    impact=_bm_3_5.impact,
+    audit_procedure=_bm_3_5.audit_procedure,
+    remediation=_bm_3_5.remediation,
+    default_value=_bm_3_5.default_value,
+    references=list(_bm_3_5.references),
+    cis_controls=list(_bm_3_5.cis_controls),
+)
+
+
+class _AWSV5_3_5(CIS_4_5):
+    metadata = _meta_3_5
+
+    async def check(self, data: CollectedData) -> "Finding":
+        trails = data.get("cloudtrail_trails")
+        if trails is None:
+            return self._skip("Could not retrieve CloudTrail trails.")
+        if not trails:
+            return self._skip(
+                "No CloudTrail trails found — cannot evaluate KMS encryption (check skipped)."
+            )
+        return await super().check(data)
+
+
+registry.register(_AWSV5_3_5())
+
 _v5(CIS_4_6, "aws-cis-v5-3.6", _LOG)
 _v5(CIS_4_7, "aws-cis-v5-3.7", _LOG)
 _v5(CIS_4_8, "aws-cis-v5-3.8", _LOG)
