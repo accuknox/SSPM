@@ -71,10 +71,4 @@ class CIS_1_3_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Microsoft Forms phishing protection via the admin center:\n"
-            "  1. Go to https://admin.microsoft.com\n"
-            "  2. Navigate to Settings > Org settings > Forms\n"
-            "  3. Verify 'Internal phishing protection' is enabled\n\n"
-            "There is no Microsoft Graph API available for this setting."
-        )
+        return self._manual()

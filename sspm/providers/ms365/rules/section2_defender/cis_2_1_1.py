@@ -86,13 +86,4 @@ class CIS_2_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Safe Links for Office Applications via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-SafeLinksPolicy | Select Name, EnableSafeLinksForOffice, "
-            "IsEnabled, DeliverMessageAfterScan\n\n"
-            "Compliant: EnableSafeLinksForOffice = True, IsEnabled = True.\n\n"
-            "Or verify in Microsoft Defender portal:\n"
-            "  https://security.microsoft.com → Email & Collaboration > "
-            "Policies & Rules > Threat policies > Safe Links"
-        )
+        return self._manual()

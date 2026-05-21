@@ -83,10 +83,4 @@ class CIS_3_1_2_1_1_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify public file publishing is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Sharing options\n"
-            "  4. Ensure 'users can make files visible to anyone with the link' is unchecked"
-        )
+        return self._manual()

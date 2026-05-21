@@ -69,9 +69,4 @@ class CIS_8_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Teams channel email setting via Microsoft Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsClientConfiguration | Select-Object AllowEmailIntoChannel\n\n"
-            "Compliant: AllowEmailIntoChannel = False"
-        )
+        return self._manual()

@@ -65,8 +65,7 @@ class GWSRule(BaseRule):
             status=FindingStatus.MANUAL,
             resource_id=resource_id,
             resource_type=resource_type,
-            message=message or self.metadata.audit_procedure,
-            remediation_guidance=self.metadata.remediation,
+            message=message,
         )
 
     def _skip(self, reason: str) -> Finding:

@@ -67,10 +67,4 @@ class CIS_9_1_10(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify service principal access to Microsoft Fabric API:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Developer settings\n"
-            "  3. Check 'Allow service principals to use Fabric APIs'\n"
-            "  Compliant: Disabled or restricted to specific security groups"
-        )
+        return self._manual()

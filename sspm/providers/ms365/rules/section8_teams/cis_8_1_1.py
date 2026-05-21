@@ -70,10 +70,4 @@ class CIS_8_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Teams external file sharing storage via Microsoft Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsClientConfiguration | Select-Object AllowDropbox, "
-            "AllowBox, AllowGoogleDrive, AllowShareFile\n\n"
-            "Compliant: All third-party storage options are False."
-        )
+        return self._manual()

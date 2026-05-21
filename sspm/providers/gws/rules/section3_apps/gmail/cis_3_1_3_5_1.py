@@ -89,15 +89,7 @@ class CIS_3_1_3_5_1(GWSRule):
         # If both lists are unavailable the gmail.settings.basic scope is likely
         # missing from DWD — fall back to manual.
         if imap_users is None and pop_users is None:
-            return self._manual(
-                "Gmail per-user settings could not be collected.  "
-                "Ensure the 'gmail.settings.basic' scope is authorised in "
-                "Domain-wide Delegation, then re-run the scan.\n\n"
-                "Manual verification:\n"
-                "  1. Log in to https://admin.google.com\n"
-                "  2. Select Apps → Google Workspace → Gmail → End User Access\n"
-                "  3. Ensure 'POP Access' and 'IMAP Access' are both unchecked"
-            )
+            return self._manual()
 
         violations: list[str] = []
         evidence: list[Evidence] = []

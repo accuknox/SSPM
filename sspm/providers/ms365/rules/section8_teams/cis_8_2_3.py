@@ -68,9 +68,4 @@ class CIS_8_2_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external Teams users cannot initiate conversations:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsExternalAccessPolicy | Select-Object AllowTeamsConsumerInbound\n\n"
-            "Compliant: AllowTeamsConsumerInbound = False"
-        )
+        return self._manual()

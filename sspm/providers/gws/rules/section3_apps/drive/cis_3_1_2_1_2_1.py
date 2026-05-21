@@ -78,10 +78,4 @@ class CIS_3_1_2_1_2_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify users can create new shared drives:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Shared drive creation\n"
-            "  4. Ensure 'Prevent users from creating new shared drives' is unchecked"
-        )
+        return self._manual()

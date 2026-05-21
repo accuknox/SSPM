@@ -100,7 +100,5 @@ class CIS_7_2_11(MS365Rule):
             )
 
         return self._manual(
-            f"Default link permission = {default_link_permission}. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing\n"
-            "  Check default link permission"
+            f"Default link permission is '{default_link_permission}'."
         )

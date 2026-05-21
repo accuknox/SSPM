@@ -76,9 +76,4 @@ class CIS_2_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Common Attachment Types Filter via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-MalwareFilterPolicy | Select Name, EnableFileFilter, FileTypes\n\n"
-            "Compliant: EnableFileFilter = True on the default or applicable policy."
-        )
+        return self._manual()

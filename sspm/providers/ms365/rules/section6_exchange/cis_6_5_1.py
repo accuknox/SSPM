@@ -80,12 +80,4 @@ class CIS_6_5_1(MS365Rule):
 
         # We'll check via a manual approach since the exchange settings
         # endpoint requires specific permissions
-        return self._manual(
-            "Verify Exchange Online modern authentication:\n"
-            "  Option 1: Exchange Online PowerShell\n"
-            "    Connect-ExchangeOnline\n"
-            "    Get-OrganizationConfig | Select-Object OAuth2ClientProfileEnabled\n"
-            "    Compliant: OAuth2ClientProfileEnabled = True\n\n"
-            "  Option 2: Microsoft Entra admin center → Identity > Overview > Properties\n"
-            "    Check that modern authentication is enabled"
-        )
+        return self._manual()

@@ -66,10 +66,4 @@ class CIS_9_1_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify sensitivity labels are enabled for Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Information protection\n"
-            "  3. Check if sensitivity label capabilities are enabled for Fabric\n"
-            "  Compliant: Sensitivity labels are enabled and applied to content"
-        )
+        return self._manual()

@@ -79,12 +79,4 @@ class CIS_3_1_3_4_3_5(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify groups are protected from inbound emails spoofing your domain:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under Safety → Spoofing and authentication\n"
-            "  4. Ensure 'Protect your Groups from inbound emails spoofing your "
-            "domain' is checked\n"
-            "  5. Ensure Action is set to 'Move email to spam'"
-        )
+        return self._manual()

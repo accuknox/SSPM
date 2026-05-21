@@ -88,13 +88,7 @@ class CIS_1_3_6(MS365Rule):
         lockbox_enabled = org.get("isCustomerLockboxEnabled")
 
         if lockbox_enabled is None:
-            return self._manual(
-                "Customer Lockbox status could not be determined from Graph API. "
-                "Verify via:\n"
-                "  Microsoft 365 admin center → Settings > Org settings > "
-                "Security & privacy > Customer Lockbox.\n"
-                "Ensure it is enabled (requires E5 license)."
-            )
+            return self._manual()
 
         evidence = [
             Evidence(

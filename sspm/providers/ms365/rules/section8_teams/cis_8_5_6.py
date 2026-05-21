@@ -67,9 +67,4 @@ class CIS_8_5_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify meeting presenter settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object DesignatedPresenterRoleMode\n\n"
-            "Compliant: DesignatedPresenterRoleMode = OrganizerOnlyUserOverride"
-        )
+        return self._manual()

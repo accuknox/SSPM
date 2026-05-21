@@ -96,12 +96,7 @@ class CIS_4_2(MS365Rule):
         ]
 
         if not restriction_configs:
-            return self._manual(
-                "Enrollment configurations found but restriction type not identified. "
-                "Verify personal device enrollment blocking manually:\n"
-                "  Microsoft Intune admin center → Devices > Enrollment > "
-                "Enrollment restrictions"
-            )
+            return self._manual()
 
         # Check if any restriction blocks personal devices
         blocks_personal = False

@@ -101,13 +101,5 @@ class CIS_6_2_1(MS365Rule):
         # data.get("transport_rules") returns None because the collector
         # deliberately returns None for this key (no Graph endpoint exists).
         return self._manual(
-            message=(
-                "Exchange transport rules cannot be read via Microsoft Graph. "
-                "Verify external mail forwarding is blocked using Exchange Online "
-                "PowerShell:\n\n"
-                "  Get-HostedOutboundSpamFilterPolicy | Select-Object Name, AutoForwardingMode\n"
-                "  Expected: AutoForwardingMode = 'Off'\n\n"
-                "  Get-TransportRule | Where-Object { $_.RedirectMessageTo -ne $null }\n"
-                "  Expected: no rules forward mail to external recipients."
-            )
+            message="Exchange transport rules cannot be read via Microsoft Graph."
         )

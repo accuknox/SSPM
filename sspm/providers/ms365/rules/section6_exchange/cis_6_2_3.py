@@ -67,9 +67,4 @@ class CIS_6_2_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external sender identification in Outlook:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-ExternalInOutlook | Select-Object Enabled\n\n"
-            "Compliant: Enabled = True."
-        )
+        return self._manual()

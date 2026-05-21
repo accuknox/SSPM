@@ -82,12 +82,4 @@ class CIS_1_3_3(MS365Rule):
         # Calendar sharing is controlled via Exchange Online sharing policies
         # which are not available through Microsoft Graph API.
         # This requires Exchange Online PowerShell.
-        return self._manual(
-            "Verify external calendar sharing via Exchange Online PowerShell:\n"
-            "  Get-SharingPolicy | Select Name, Domains, Enabled\n"
-            "  Get-OrganizationConfig | Select-Object SharingPolicies\n\n"
-            "Or via Exchange admin center → Organization > Sharing.\n"
-            "Ensure no sharing policy allows external users to view calendar details.\n"
-            "Free/busy only (FreeBusySimple) is acceptable; CalendarSharing with "
-            "details is non-compliant."
-        )
+        return self._manual()

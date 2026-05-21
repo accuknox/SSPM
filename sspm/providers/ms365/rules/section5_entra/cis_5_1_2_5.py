@@ -102,10 +102,4 @@ class CIS_5_1_2_5(MS365Rule):
                     ],
                 )
 
-        return self._manual(
-            "Verify the 'Stay signed in?' setting via Microsoft Entra admin center:\n"
-            "  1. Go to https://entra.microsoft.com\n"
-            "  2. Navigate to Identity > Overview > Company branding\n"
-            "  3. Edit the default branding\n"
-            "  4. Verify 'Show option to remain signed in' is set to No"
-        )
+        return self._manual()

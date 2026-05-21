@@ -77,10 +77,4 @@ class CIS_2_1_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Safe Attachments policy via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-SafeAttachmentPolicy | Select Name, Enable, Action\n\n"
-            "Compliant: Enable = True, Action = Block or DynamicDelivery, "
-            "applied to all recipients."
-        )
+        return self._manual()

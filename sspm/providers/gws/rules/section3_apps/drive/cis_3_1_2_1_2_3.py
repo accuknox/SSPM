@@ -79,11 +79,4 @@ class CIS_3_1_2_1_2_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify shared drive access is restricted to members:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Shared drive creation\n"
-            "  4. Ensure 'Allow people who aren't shared drive members to be added "
-            "to files' is unchecked"
-        )
+        return self._manual()

@@ -98,6 +98,5 @@ class CIS_7_2_6(MS365Rule):
             )
 
         return self._manual(
-            f"SharePoint sharing capability = {sharing_cap}. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing"
+            f"SharePoint sharing capability is '{sharing_cap}'."
         )

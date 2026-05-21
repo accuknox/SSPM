@@ -110,7 +110,5 @@ class CIS_5_1_4_4(MS365Rule):
             )
 
         return self._manual(
-            f"Local admin type is '{local_admin_type}'. Verify acceptable configuration:\n"
-            "  Microsoft Entra admin center → Identity > Devices > Device settings\n"
-            "  Check 'Registering user is added as local administrator' setting"
+            f"Local admin type is '{local_admin_type}'."
         )

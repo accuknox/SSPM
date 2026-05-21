@@ -87,11 +87,7 @@ class CIS_5_2_3_7(MS365Rule):
 
         if email_config is None:
             # Email OTP not found; might mean it's controlled differently
-            return self._manual(
-                "Email OTP method configuration not found in authentication methods policy. "
-                "Verify manually in Microsoft Entra admin center:\n"
-                "  Protection > Authentication methods > Email OTP"
-            )
+            return self._manual()
 
         state = email_config.get("state", "").lower()
 

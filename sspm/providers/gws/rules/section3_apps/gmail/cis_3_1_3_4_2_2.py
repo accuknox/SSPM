@@ -69,10 +69,4 @@ class CIS_3_1_3_4_2_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify scan linked images for malicious content is enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Under Safety → Links and external images\n"
-            "  4. Ensure 'Scan linked images' is checked"
-        )
+        return self._manual()

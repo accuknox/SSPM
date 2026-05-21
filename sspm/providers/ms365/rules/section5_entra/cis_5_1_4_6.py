@@ -101,9 +101,4 @@ class CIS_5_1_4_6(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "BitLocker key recovery restriction could not be verified via Graph API. "
-            "Verify manually:\n"
-            "  Microsoft Entra admin center → Identity > Devices > Device settings\n"
-            "  Check 'Restrict users from recovering the BitLocker key(s) for their owned devices'"
-        )
+        return self._manual()

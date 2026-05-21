@@ -67,10 +67,4 @@ class CIS_9_1_12(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify service principal workspace creation restrictions in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Workspace settings\n"
-            "  3. Check workspace creation permissions for service principals\n"
-            "  Compliant: Service principals cannot create workspaces"
-        )
+        return self._manual()

@@ -59,6 +59,12 @@ class CISProfile(str, Enum):
     # Google Workspace profiles (CIS GWS Foundations Benchmark)
     GWS_EL1 = "Enterprise Level 1"
     GWS_EL2 = "Enterprise Level 2"
+    # AWS profiles (CIS AWS Foundations Benchmark)
+    AWS_L1 = "AWS Level 1"
+    AWS_L2 = "AWS Level 2"
+    # Azure profiles (CIS Microsoft Azure Foundations Benchmark)
+    AZURE_L1 = "Azure Level 1"
+    AZURE_L2 = "Azure Level 2"
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +116,9 @@ class RuleMetadata:
     # --- References ---
     references: list[str] = field(default_factory=list)
     cis_controls: list[CISControl] = field(default_factory=list)
+
+    # --- Benchmark version (e.g. "v5.0.0"); empty string = legacy/unversioned ---
+    benchmark_version: str = ""
 
     # --- Tagging (free-form, for filtering) ---
     tags: list[str] = field(default_factory=list)

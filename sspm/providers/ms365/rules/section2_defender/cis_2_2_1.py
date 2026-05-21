@@ -79,12 +79,4 @@ class CIS_2_2_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify emergency access account monitoring:\n"
-            "  1. Identify emergency access accounts (break-glass accounts)\n"
-            "  2. Verify Azure Monitor alerts are configured for sign-ins from these accounts\n"
-            "  3. Verify the alert action group notifies the security team\n"
-            "  4. Test the alert by reviewing recent alerts or triggering a test sign-in\n\n"
-            "Azure portal → Monitor > Alerts > Alert rules\n"
-            "Filter by condition to find sign-in alerts for emergency accounts."
-        )
+        return self._manual()

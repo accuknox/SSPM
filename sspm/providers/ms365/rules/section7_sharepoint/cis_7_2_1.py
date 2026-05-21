@@ -102,7 +102,4 @@ class CIS_7_2_1(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "Legacy auth setting not found in SharePoint settings. Verify manually:\n"
-            "  SharePoint admin center → Settings > SharePoint"
-        )
+        return self._manual()

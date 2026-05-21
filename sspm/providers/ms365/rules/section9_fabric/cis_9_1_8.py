@@ -67,10 +67,4 @@ class CIS_9_1_8(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external data sharing restrictions in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Export and sharing settings\n"
-            "  3. Check external data sharing settings\n"
-            "  Compliant: External data sharing is disabled or restricted"
-        )
+        return self._manual()

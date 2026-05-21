@@ -67,10 +67,4 @@ class CIS_9_1_11(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify service principal profile creation in Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Developer settings\n"
-            "  3. Check 'Service principals can create and use profiles'\n"
-            "  Compliant: Disabled"
-        )
+        return self._manual()

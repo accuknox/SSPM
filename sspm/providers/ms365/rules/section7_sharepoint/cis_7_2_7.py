@@ -105,6 +105,5 @@ class CIS_7_2_7(MS365Rule):
             )
 
         return self._manual(
-            f"Default sharing link type = {default_link_type}. Verify manually:\n"
-            "  SharePoint admin center → Policies > Sharing"
+            f"Default sharing link type is '{default_link_type}'."
         )

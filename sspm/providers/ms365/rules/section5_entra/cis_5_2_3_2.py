@@ -77,11 +77,4 @@ class CIS_5_2_3_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify custom banned passwords configuration:\n"
-            "  1. Go to https://entra.microsoft.com\n"
-            "  2. Navigate to Protection > Authentication methods > Password protection\n"
-            "  3. Verify 'Enforce custom list' is enabled\n"
-            "  4. Verify the custom banned password list contains organization-specific terms\n\n"
-            "The custom banned password list cannot be verified via Graph API."
-        )
+        return self._manual()

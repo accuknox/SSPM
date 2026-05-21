@@ -71,10 +71,4 @@ class CIS_1_3_8(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Sway external sharing restrictions via the admin center:\n"
-            "  1. Go to https://admin.microsoft.com\n"
-            "  2. Navigate to Settings > Org settings > Sway\n"
-            "  3. Verify that external sharing is disabled\n\n"
-            "There is no Microsoft Graph API available for this setting."
-        )
+        return self._manual()

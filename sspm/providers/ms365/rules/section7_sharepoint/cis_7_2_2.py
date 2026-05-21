@@ -101,8 +101,4 @@ class CIS_7_2_2(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "B2B integration setting not found in SharePoint settings. Verify manually:\n"
-            "  SharePoint admin center → Settings > External collaboration\n"
-            "  Verify Microsoft Entra B2B integration is enabled"
-        )
+        return self._manual()

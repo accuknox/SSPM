@@ -78,10 +78,4 @@ class CIS_3_1_2_1_1_4(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify warning when sharing with allowlisted domain users:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing Settings → Sharing options → Sharing outside of <Company>\n"
-            "  4. Verify 'Warn when sharing with users in allowlisted domains' is checked"
-        )
+        return self._manual()

@@ -67,9 +67,4 @@ class CIS_8_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify communication with unmanaged Teams users:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsExternalAccessPolicy | Select-Object AllowTeamsConsumer\n\n"
-            "Compliant: AllowTeamsConsumer = False"
-        )
+        return self._manual()

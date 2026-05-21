@@ -86,12 +86,4 @@ class CIS_3_1_3_6_2(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify spam filters are not bypassed for internal senders:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select Spam, Phishing and Malware\n"
-            "  4. Select Spam → Configure\n"
-            "  5. Ensure 'Bypass spam filters for messages from internal "
-            "senders' is unchecked"
-        )
+        return self._manual()

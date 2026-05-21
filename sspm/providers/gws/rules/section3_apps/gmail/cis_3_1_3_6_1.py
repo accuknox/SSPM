@@ -78,10 +78,4 @@ class CIS_3_1_3_6_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify enhanced pre-delivery message scanning is enabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Select Apps → Google Workspace → Gmail\n"
-            "  3. Select Spam, Phishing and Malware\n"
-            "  4. Ensure 'Enhanced pre-delivery message scanning' is ON"
-        )
+        return self._manual()

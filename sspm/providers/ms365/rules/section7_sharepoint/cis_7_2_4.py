@@ -82,11 +82,7 @@ class CIS_7_2_4(MS365Rule):
             onedrive_sharing = settings.get("sharingCapability")
 
         if onedrive_sharing is None:
-            return self._manual(
-                "OneDrive sharing capability setting not found. Verify manually:\n"
-                "  SharePoint admin center → Policies > Sharing\n"
-                "  Check OneDrive sharing level"
-            )
+            return self._manual()
 
         cap_names = {
             0: "Disabled",

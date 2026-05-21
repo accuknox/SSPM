@@ -75,11 +75,4 @@ class CIS_2_1_11(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify comprehensive attachment filtering via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-MalwareFilterPolicy | Select Name, EnableFileFilter, FileTypes\n\n"
-            "Verify FileTypes includes script extensions (.ps1, .vbs, .js, .cmd, .bat) "
-            "in addition to executable types (.exe, .msi, .scr).\n"
-            "EnableFileFilter should be True."
-        )
+        return self._manual()

@@ -67,10 +67,4 @@ class CIS_7_2_8(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external sharing is restricted by security group:\n"
-            "  1. Go to SharePoint admin center (admin.microsoft.com → SharePoint)\n"
-            "  2. Navigate to Policies > Sharing\n"
-            "  3. Verify external sharing is limited to members of a specific security group\n\n"
-            "This setting cannot be verified via Microsoft Graph API."
-        )
+        return self._manual()

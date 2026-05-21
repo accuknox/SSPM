@@ -68,9 +68,4 @@ class CIS_6_5_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify OWA additional storage providers restriction:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-OwaMailboxPolicy | Select-Object Name, AdditionalStorageProvidersEnabled\n\n"
-            "Compliant: AdditionalStorageProvidersEnabled = False for all policies."
-        )
+        return self._manual()

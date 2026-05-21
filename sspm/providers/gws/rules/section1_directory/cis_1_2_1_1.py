@@ -80,11 +80,4 @@ class CIS_1_2_1_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external directory sharing is disabled:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Directory → Directory settings\n"
-            "  3. Under 'Sharing settings', verify 'Enable contact sharing' "
-            "is unchecked\n\n"
-            "External users should not be able to search for internal users."
-        )
+        return self._manual()

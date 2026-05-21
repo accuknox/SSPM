@@ -72,11 +72,4 @@ class CIS_1_3_9(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify Bookings restrictions via the admin center:\n"
-            "  1. Go to https://admin.microsoft.com\n"
-            "  2. Navigate to Settings > Org settings > Bookings\n"
-            "  3. Verify that public Bookings pages are restricted or disabled\n"
-            "  4. Ensure only licensed users can create Bookings calendars\n\n"
-            "There is no Microsoft Graph API available for this setting."
-        )
+        return self._manual()

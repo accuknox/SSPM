@@ -76,10 +76,4 @@ class CIS_3_1_2_2_1(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify offline document access is controlled by device policies:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Select Features and Applications → Offline\n"
-            "  4. Ensure 'Control offline access using device policies' is checked"
-        )
+        return self._manual()

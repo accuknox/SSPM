@@ -65,9 +65,4 @@ class CIS_8_5_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify dial-in lobby bypass setting via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowPSTNUsersToBypassLobby\n\n"
-            "Compliant: AllowPSTNUsersToBypassLobby = False"
-        )
+        return self._manual()

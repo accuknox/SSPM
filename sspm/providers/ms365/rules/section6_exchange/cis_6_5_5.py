@@ -73,10 +73,4 @@ class CIS_6_5_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify receive connectors and direct send configuration:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-ReceiveConnector | Select-Object Name, Bindings, "
-            "RemoteIPRanges, AuthMechanism\n\n"
-            "Verify no receive connectors allow unauthenticated email from broad IP ranges."
-        )
+        return self._manual()

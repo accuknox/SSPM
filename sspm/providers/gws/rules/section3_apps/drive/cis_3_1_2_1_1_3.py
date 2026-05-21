@@ -85,11 +85,4 @@ class CIS_3_1_2_1_1_3(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify document sharing is controlled by domain allowlists:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Sharing options → Sharing outside of <Company>\n"
-            "  4. Verify 'ALLOWLISTED DOMAINS' is selected\n"
-            "  5. Verify 'Warn when sharing with allowlisted domains' is checked"
-        )
+        return self._manual()

@@ -20,8 +20,8 @@ from typing import Any
 from sspm.core.models import FindingStatus, ScanResult, Severity
 
 _SARIF_SCHEMA = (
-    "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/"
-    "Schemata/sarif-schema-2.1.0.json"
+    "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/"
+    "sarif-2.1/schema/sarif-schema-2.1.0.json"
 )
 
 _SEVERITY_TO_LEVEL: dict[str, str] = {
@@ -87,12 +87,27 @@ def _rule_descriptor(rule_meta) -> dict[str, Any]:
             "defaultValue": rule_meta.default_value,
             "cisControls": cis_controls,
             "tags": rule_meta.tags,
+            "audit": rule_meta.audit_procedure,
+            "remediation": rule_meta.remediation,
         },
         "helpUri": rule_meta.references[0] if rule_meta.references else "",
     }
 
 
-def _finding_result(finding, rule_index: int) -> dict[str, Any]:
+def _target_fqn(provider: str, target: str) -> str:
+    """Return a provider-appropriate fully-qualified name for a tenant/account-level target."""
+    if provider == "aws":
+        return f"arn:aws:iam::{target}:root"
+    if provider == "ms365":
+        return f"ms365://{target}"
+    if provider == "gws":
+        return f"gws://{target}"
+    if provider == "azure":
+        return f"azure://subscriptions/{target}"
+    return target
+
+
+def _finding_result(finding, rule_index: int, target: str = "", provider: str = "") -> dict[str, Any]:
     """Convert Finding → SARIF result object."""
     kind = _STATUS_TO_KIND.get(finding.status, "none")
     level: str
@@ -103,31 +118,55 @@ def _finding_result(finding, rule_index: int) -> dict[str, Any]:
     else:
         level = "none"
 
-    # Build the message text
-    message_parts = [finding.message or finding.rule.title]
+    # Build the message
     if finding.status == FindingStatus.MANUAL:
-        message_parts.append(
-            "This control requires manual verification. "
-            "See auditProcedure in rule properties."
-        )
-    remediation = finding.remediation_guidance or finding.rule.remediation
-    if finding.status == FindingStatus.FAIL and remediation:
-        message_parts.append(f"Remediation: {remediation}")
+        # Manual findings: short label + rule title as text; CIS description as description.
+        short_text = f"Manual: {finding.rule.title}"
+        description = finding.rule.description
+    else:
+        base_message = finding.message or finding.rule.title
+        # text = short finding summary (strip trailing ': item, item...' resource list if present)
+        colon_idx = base_message.find(': ')
+        if colon_idx > 0 and ',' in base_message[colon_idx + 2:]:
+            short_text = base_message[:colon_idx]
+        else:
+            short_text = base_message
+        # description = full finding detail when it differs from the short summary;
+        # otherwise fall back to the rule's CIS benchmark description for context.
+        description = base_message if base_message != short_text else finding.rule.description
 
     # Location – use logical location (tenant / resource) rather than file URI
+    # Prefer a specific resource ID; fall back to a provider-appropriate tenant FQN.
     locations = []
-    if finding.resource_id or finding.resource_type:
+    if finding.resource_id or finding.resource_type or target:
+        resource_type = finding.resource_type or "tenant"
+        resource_id = finding.resource_id  # specific resource ID when available
+
+        if resource_id:
+            # Resource-specific finding: use the resource ID directly as fullyQualifiedName.
+            # For AWS ARNs, extract a human-readable short name from the last path/colon segment,
+            # skipping wildcard suffixes like ":*".
+            if resource_id.startswith("arn:"):
+                parts = [p for p in resource_id.split(":") if p and p != "*"]
+                name = parts[-1].split("/")[-1] if parts else resource_id
+            else:
+                name = resource_id
+            fqn = resource_id
+        elif target:
+            # Account-level finding: use a provider-appropriate FQN as fallback
+            name = target
+            fqn = _target_fqn(provider, target)
+        else:
+            name = resource_type
+            fqn = resource_type
+
         locations.append(
             {
                 "logicalLocations": [
                     {
-                        "name": finding.resource_id or finding.rule.id,
-                        "kind": finding.resource_type or "tenant",
-                        "fullyQualifiedName": (
-                            f"{finding.resource_type}/{finding.resource_id}"
-                            if finding.resource_id
-                            else finding.resource_type
-                        ),
+                        "name": name,
+                        "kind": resource_type,
+                        "fullyQualifiedName": fqn,
                     }
                 ]
             }
@@ -148,7 +187,7 @@ def _finding_result(finding, rule_index: int) -> dict[str, Any]:
         "ruleIndex": rule_index,
         "kind": kind,
         "level": level,
-        "message": {"text": " ".join(message_parts)},
+        "message": {"text": short_text, "description": description},
         "properties": {
             "status": finding.status.value,
             "resourceId": finding.resource_id,
@@ -178,7 +217,8 @@ def to_sarif(scan_result: ScanResult) -> dict[str, Any]:
             rule_descriptors.append(_rule_descriptor(finding.rule))
 
     results = [
-        _finding_result(f, seen_ids[f.rule.id]) for f in scan_result.findings
+        _finding_result(f, seen_ids[f.rule.id], target=scan_result.target, provider=scan_result.provider)
+        for f in scan_result.findings
     ]
 
     summary = scan_result.summary()
@@ -210,6 +250,9 @@ def to_sarif(scan_result: ScanResult) -> dict[str, Any]:
                             "target": scan_result.target,
                             "scanId": scan_result.scan_id,
                         },
+                        "workingDirectory": {
+                            "uri": scan_result.target,
+                        }
                     }
                 ],
                 "results": results,

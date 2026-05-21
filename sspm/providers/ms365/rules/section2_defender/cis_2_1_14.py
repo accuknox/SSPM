@@ -71,9 +71,4 @@ class CIS_2_1_14(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify inbound anti-spam allowed domains via Exchange Online PowerShell:\n"
-            "  Connect-ExchangeOnline\n"
-            "  Get-HostedContentFilterPolicy | Select Name, AllowedSenderDomains\n\n"
-            "Compliant: AllowedSenderDomains is empty for all policies."
-        )
+        return self._manual()

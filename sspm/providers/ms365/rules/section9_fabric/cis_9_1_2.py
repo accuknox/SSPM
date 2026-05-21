@@ -68,10 +68,4 @@ class CIS_9_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external user invitations to Microsoft Fabric:\n"
-            "  1. Go to https://app.powerbi.com/admin\n"
-            "  2. Navigate to Tenant settings > Export and sharing settings\n"
-            "  3. Check 'Invite external users to your organization through Microsoft Fabric'\n"
-            "  Compliant: Setting is disabled"
-        )
+        return self._manual()

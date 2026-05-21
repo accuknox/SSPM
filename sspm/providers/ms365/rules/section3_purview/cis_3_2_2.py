@@ -99,11 +99,5 @@ class CIS_3_2_2(MS365Rule):
 
         # We can't easily determine Teams coverage from the sensitivity labels endpoint
         return self._manual(
-            "DLP policies exist but Teams coverage cannot be verified via the "
-            "available Graph API endpoint. Verify manually:\n"
-            "  1. Go to https://compliance.microsoft.com\n"
-            "  2. Navigate to Data loss prevention > Policies\n"
-            "  3. For each policy, verify 'Microsoft Teams chat and channel messages' "
-            "is included as a location.\n\n"
-            f"Total policies found: {len(dlp_policies)}"
+            f"DLP policies found ({len(dlp_policies)}) but Teams location coverage cannot be verified via Graph API."
         )

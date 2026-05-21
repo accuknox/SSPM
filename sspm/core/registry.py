@@ -56,6 +56,13 @@ class RuleRegistry:
         target = CISProfile(profile)
         return [r for r in self._rules.values() if target in r.metadata.profiles]
 
+    def rules_for_benchmark_version(self, provider: str, version: str) -> list["BaseRule"]:
+        """Return rules for *provider* whose benchmark_version matches *version*."""
+        return [
+            r for r in self._rules.values()
+            if r.provider == provider and r.metadata.benchmark_version == version
+        ]
+
     # ------------------------------------------------------------------
     # Auto-discovery
     # ------------------------------------------------------------------

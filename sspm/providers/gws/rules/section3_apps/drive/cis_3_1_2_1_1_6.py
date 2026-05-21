@@ -80,11 +80,4 @@ class CIS_3_1_2_1_1_6(GWSRule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify only internal users can distribute content externally:\n"
-            "  1. Log in to https://admin.google.com\n"
-            "  2. Navigate to Apps → Google Workspace → Drive and Docs\n"
-            "  3. Under Sharing settings → Sharing options\n"
-            "  4. Under 'Distributing content outside of <Company>', ensure "
-            "'Only users in <Company>' is selected"
-        )
+        return self._manual()

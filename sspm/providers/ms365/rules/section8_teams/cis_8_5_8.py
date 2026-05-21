@@ -66,9 +66,4 @@ class CIS_8_5_8(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual(
-            "Verify external meeting chat settings via Teams PowerShell:\n"
-            "  Connect-MicrosoftTeams\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object MeetingChatEnabledType\n\n"
-            "Compliant: External participants are restricted from meeting chat."
-        )
+        return self._manual()

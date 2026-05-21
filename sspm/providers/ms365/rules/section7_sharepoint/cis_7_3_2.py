@@ -98,7 +98,4 @@ class CIS_7_3_2(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
-            "OneDrive sync restriction setting not found. Verify manually:\n"
-            "  SharePoint admin center → Settings > OneDrive sync"
-        )
+        return self._manual()

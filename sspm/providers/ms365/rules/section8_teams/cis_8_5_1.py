@@ -84,14 +84,7 @@ class CIS_8_5_1(MS365Rule):
         # Flag as manual if not available.
         meeting_policies = data.get("teams_meeting_policies")
         if not meeting_policies:
-            return self._manual(
-                message=(
-                    "Verify via Teams PowerShell:\n"
-                    "Get-CsTeamsMeetingPolicy -Identity Global | "
-                    "Select-Object AllowAnonymousUsersToJoinMeeting\n"
-                    "Expected: False"
-                )
-            )
+            return self._manual()
 
         global_policy = next(
             (p for p in meeting_policies if p.get("identity") == "Global"), None
