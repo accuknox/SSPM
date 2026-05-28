@@ -92,6 +92,7 @@ API_VERSIONS = {
     "security_pricings": "2024-01-01",
     "security_auto": "2017-08-01-preview",
     "databricks": "2023-02-01",
+    "web": "2022-03-01",
 }
 
 
@@ -122,6 +123,7 @@ class AzureCollector:
 
     def _collect_all(self) -> None:
         self._safe("security_defaults", self._collect_security_defaults)
+        self._safe("authorization_policy", self._collect_authorization_policy)
         self._safe("subscription", self._collect_subscription)
         self._safe("role_definitions", self._collect_role_definitions)
         self._safe("role_assignments", self._collect_role_assignments)
@@ -150,6 +152,7 @@ class AzureCollector:
         self._safe("security_contacts_v2", self._collect_security_contacts_v2)
         self._safe("auto_provisioning_settings", self._collect_auto_provisioning)
         self._safe("databricks_workspaces", self._collect_databricks_workspaces)
+        self._safe("web_apps", self._collect_web_apps)
         self._safe("key_vault_keys", self._collect_keyvault_keys)
         self._safe("key_vault_secrets", self._collect_keyvault_secrets)
         self._safe("key_vault_certificates", self._collect_keyvault_certificates)
@@ -224,6 +227,10 @@ class AzureCollector:
     def _collect_security_defaults(self) -> None:
         body = self._graph_get("/policies/identitySecurityDefaultsEnforcementPolicy")
         self._data["security_defaults"] = body
+
+    def _collect_authorization_policy(self) -> None:
+        body = self._graph_get("/policies/authorizationPolicy")
+        self._data["authorization_policy"] = body
 
     def _collect_subscription(self) -> None:
         body = self._arm_get(
@@ -462,6 +469,22 @@ class AzureCollector:
             API_VERSIONS["databricks"],
         )
         self._data["databricks_workspaces"] = items
+
+    def _collect_web_apps(self) -> None:
+        sites = self._arm_list(
+            f"/subscriptions/{self._subscription_id}/providers/Microsoft.Web/sites",
+            API_VERSIONS["web"],
+        )
+        configs: dict[str, dict] = {}
+        for site in sites:
+            site_id = site.get("id", "")
+            try:
+                cfg = self._arm_get(f"{site_id}/config/web", API_VERSIONS["web"])
+                configs[site_id.lower()] = cfg
+            except Exception as exc:  # noqa: BLE001
+                log.debug("web app config fetch failed for %s: %s", site_id, exc)
+        self._data["web_apps"] = sites
+        self._data["web_app_configs"] = configs
 
     def _collect_keyvault_keys(self) -> None:
         result: dict[str, list[dict[str, Any]]] = {}

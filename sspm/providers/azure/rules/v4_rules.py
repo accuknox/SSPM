@@ -313,7 +313,78 @@ _v4(CIS_5_3_4, "azure-cis-v4-6.3.4", "6.3 Periodic Identity Reviews", _MANUAL)
 
 # 6.4 – 6.21: additional identity checks in v4 (new or not yet in v6 codebase)
 _SEC_ID = "6 Identity Services"
-_v4_stub("azure-cis-v4-6.4",  "Ensure that 'Restrict non-admin users from creating tenants' is set to 'Yes'", _SEC_ID, _AUTO, severity=Severity.MEDIUM)
+
+
+def _register_6_4() -> None:
+    meta = RuleMetadata(
+        id="azure-cis-v4-6.4",
+        title="Ensure that 'Restrict non-admin users from creating tenants' is set to 'Yes'",
+        section=_SEC_ID,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L1],
+        severity=Severity.MEDIUM,
+        description=(
+            "Restricting tenant creation to administrators prevents non-privileged users from "
+            "spinning up new Azure AD tenants, which could be used to bypass organizational "
+            "security policies or create shadow IT environments."
+        ),
+        rationale=(
+            "Non-admin users who can create tenants may exfiltrate data or set up unmanaged "
+            "environments outside corporate governance. Restricting this capability reduces "
+            "the attack surface for insider threats and accidental misconfigurations."
+        ),
+        impact="Users who legitimately need to create tenants will require admin assistance.",
+        audit_procedure=(
+            "MS Graph: GET /v1.0/policies/authorizationPolicy — verify "
+            "defaultUserRolePermissions.allowedToCreateTenants == false."
+        ),
+        remediation=(
+            "Entra ID Portal → User Settings → 'Restrict non-admin users from creating tenants' "
+            "→ set to Yes → Save. "
+            "Or via Graph API: PATCH /v1.0/policies/authorizationPolicy with "
+            "{\"defaultUserRolePermissions\": {\"allowedToCreateTenants\": false}}."
+        ),
+        default_value="Non-admin users can create tenants by default (allowedToCreateTenants: true).",
+        references=[
+            "https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions",
+            "https://www.cisecurity.org/benchmark/azure",
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        policy = data.get("authorization_policy")
+        if policy is None:
+            return self._skip("Authorization policy could not be retrieved.")
+        allowed = (
+            policy.get("defaultUserRolePermissions", {})
+            .get("allowedToCreateTenants", True)
+        )
+        evidence = [Evidence(
+            source="graph:policies/authorizationPolicy",
+            data={"allowedToCreateTenants": allowed},
+        )]
+        if allowed:
+            return self._fail(
+                "Non-admin users are allowed to create tenants "
+                "(defaultUserRolePermissions.allowedToCreateTenants is true).",
+                evidence=evidence,
+            )
+        return self._pass(
+            "Tenant creation is restricted to administrators "
+            "(allowedToCreateTenants is false).",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_6_4", (AzureRule,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_6_4()
 _v4_stub("azure-cis-v4-6.5",  "Ensure that 'Number of methods required to reset' is set to '2'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.6",  "Ensure that account 'Lockout threshold' is less than or equal to '10'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.7",  "Ensure that account 'Lockout duration in seconds' is greater than or equal to '60'", _SEC_ID, _MANUAL)
@@ -323,9 +394,236 @@ _v4_stub("azure-cis-v4-6.10", "Ensure that 'Notify users on password resets?' is
 _v4_stub("azure-cis-v4-6.11", "Ensure that 'Notify all admins when other admins reset their password?' is set to 'Yes'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.12", "Ensure that 'User consent for applications' is set to 'Do not allow user consent'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.13", "Ensure that 'User consent for applications' is set to 'Allow user consent for apps from verified publishers, for selected permissions'", _SEC_ID, _MANUAL)
-_v4_stub("azure-cis-v4-6.14", "Ensure that 'Users can register applications' is set to 'No'", _SEC_ID, _AUTO, severity=Severity.MEDIUM)
-_v4_stub("azure-cis-v4-6.15", "Ensure that 'Guest users access restrictions' is set to 'Guest user access is restricted to properties and memberships of their own directory objects'", _SEC_ID, _AUTO, severity=Severity.MEDIUM)
-_v4_stub("azure-cis-v4-6.16", "Ensure that 'Guest invite restrictions' is set to 'Only users assigned to specific admin roles can invite guest users'", _SEC_ID, _AUTO, severity=Severity.MEDIUM)
+def _register_6_14() -> None:
+    meta = RuleMetadata(
+        id="azure-cis-v4-6.14",
+        title="Ensure that 'Users can register applications' is set to 'No'",
+        section=_SEC_ID,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L1],
+        severity=Severity.MEDIUM,
+        description=(
+            "Restricting application registration to administrators prevents non-privileged "
+            "users from registering applications in Azure AD, reducing the risk of unauthorized "
+            "OAuth app creation and consent grant attacks."
+        ),
+        rationale=(
+            "When users can freely register applications, attackers or malicious insiders can "
+            "create rogue OAuth apps to harvest credentials or escalate privileges via illicit "
+            "consent grants. Limiting registration to admins enforces oversight of all app "
+            "identities in the tenant."
+        ),
+        impact="Users who need to register apps must request admin assistance.",
+        audit_procedure=(
+            "MS Graph: GET /v1.0/policies/authorizationPolicy — verify "
+            "defaultUserRolePermissions.allowedToCreateApps == false."
+        ),
+        remediation=(
+            "Entra ID Portal → User Settings → 'Users can register applications' → set to No → Save. "
+            "Or via Graph API: PATCH /v1.0/policies/authorizationPolicy with "
+            "{\"defaultUserRolePermissions\": {\"allowedToCreateApps\": false}}."
+        ),
+        default_value="Users can register applications by default (allowedToCreateApps: true).",
+        references=[
+            "https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions",
+            "https://www.cisecurity.org/benchmark/azure",
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        policy = data.get("authorization_policy")
+        if policy is None:
+            return self._skip("Authorization policy could not be retrieved.")
+        allowed = (
+            policy.get("defaultUserRolePermissions", {})
+            .get("allowedToCreateApps", True)
+        )
+        evidence = [Evidence(
+            source="graph:policies/authorizationPolicy",
+            data={"allowedToCreateApps": allowed},
+        )]
+        if allowed:
+            return self._fail(
+                "Non-admin users are allowed to register applications "
+                "(defaultUserRolePermissions.allowedToCreateApps is true).",
+                evidence=evidence,
+            )
+        return self._pass(
+            "Application registration is restricted to administrators "
+            "(allowedToCreateApps is false).",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_6_14", (AzureRule,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_6_14()
+def _register_6_15() -> None:
+    # guestUserRoleId GUIDs (Entra ID / Azure AD):
+    #   a0b1b346-4d3e-4e8b-98f8-753987be4970 = same access as members (least restrictive)
+    #   10dae51f-b6af-4016-8d66-8c2a99b929b3 = restricted to own directory objects (CIS required)
+    #   2af84b1e-32c8-42b7-82bc-daa82404023b = most restricted
+    _COMPLIANT_ROLE_IDS = {
+        "10dae51f-b6af-4016-8d66-8c2a99b929b3",
+        "2af84b1e-32c8-42b7-82bc-daa82404023b",
+    }
+    _ROLE_LABELS = {
+        "a0b1b346-4d3e-4e8b-98f8-753987be4970": "Guest user access same as members",
+        "10dae51f-b6af-4016-8d66-8c2a99b929b3": "Guest user access restricted to own directory objects",
+        "2af84b1e-32c8-42b7-82bc-daa82404023b": "Guest user access restricted (most restrictive)",
+    }
+
+    meta = RuleMetadata(
+        id="azure-cis-v4-6.15",
+        title="Ensure that 'Guest users access restrictions' is set to 'Guest user access is restricted to properties and memberships of their own directory objects'",
+        section=_SEC_ID,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L1],
+        severity=Severity.MEDIUM,
+        description=(
+            "Guest user access should be restricted so that guest accounts can only read "
+            "properties and memberships of their own directory objects, preventing enumeration "
+            "of other users, groups, and directory resources."
+        ),
+        rationale=(
+            "Unrestricted guest access allows external users to enumerate users, groups, and "
+            "other directory objects, increasing the risk of targeted phishing, reconnaissance, "
+            "and privilege escalation attacks against the organization."
+        ),
+        impact="Guest users will be unable to browse the directory or view other users and groups.",
+        audit_procedure=(
+            "MS Graph: GET /v1.0/policies/authorizationPolicy — verify guestUserRoleId is "
+            "'10dae51f-b6af-4016-8d66-8c2a99b929b3' (restricted to own directory objects) "
+            "or '2af84b1e-32c8-42b7-82bc-daa82404023b' (most restricted)."
+        ),
+        remediation=(
+            "Entra ID Portal → External Identities → External collaboration settings → "
+            "'Guest user access restrictions' → select 'Guest user access is restricted to "
+            "properties and memberships of their own directory objects' → Save."
+        ),
+        default_value="Guest users have the same access as members by default (a0b1b346...).",
+        references=[
+            "https://learn.microsoft.com/en-us/entra/fundamentals/users-default-permissions#member-and-guest-users",
+            "https://www.cisecurity.org/benchmark/azure",
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        policy = data.get("authorization_policy")
+        if policy is None:
+            return self._skip("Authorization policy could not be retrieved.")
+        role_id = policy.get("guestUserRoleId", "")
+        label = _ROLE_LABELS.get(role_id, f"unknown ({role_id})")
+        evidence = [Evidence(
+            source="graph:policies/authorizationPolicy",
+            data={"guestUserRoleId": role_id, "label": label},
+        )]
+        if role_id not in _COMPLIANT_ROLE_IDS:
+            return self._fail(
+                f"Guest user access is not sufficiently restricted: '{label}' "
+                f"(guestUserRoleId: {role_id}).",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Guest user access is appropriately restricted: '{label}'.",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_6_15", (AzureRule,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_6_15()
+def _register_6_16() -> None:
+    # allowInvitesFrom values (MS Graph authorizationPolicy):
+    #   'everyone'                          = everyone including guests (least restrictive)
+    #   'adminsGuestInvitersAndAllMembers'  = admins + Guest Inviter role + all members
+    #   'adminsAndGuestInviters'            = admins + Guest Inviter role only (CIS required)
+    #   'none'                              = nobody can invite (also compliant)
+    _COMPLIANT_VALUES = {"adminsAndGuestInviters", "none"}
+    _LABELS = {
+        "everyone": "Everyone including guests (least restrictive)",
+        "adminsGuestInvitersAndAllMembers": "Admins, Guest Inviters, and all members",
+        "adminsAndGuestInviters": "Only admins and users in Guest Inviter role (CIS required)",
+        "none": "Nobody can invite guests (most restrictive)",
+    }
+
+    meta = RuleMetadata(
+        id="azure-cis-v4-6.16",
+        title="Ensure that 'Guest invite restrictions' is set to 'Only users assigned to specific admin roles can invite guest users'",
+        section=_SEC_ID,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L1],
+        severity=Severity.MEDIUM,
+        description=(
+            "Guest invitations should be restricted to administrators and users assigned the "
+            "Guest Inviter role, preventing regular users and existing guests from expanding "
+            "external access without oversight."
+        ),
+        rationale=(
+            "Allowing all members or guests to send invitations enables uncontrolled growth of "
+            "external identities in the tenant, increasing the risk of data exposure to "
+            "unauthorized parties and making access governance difficult."
+        ),
+        impact="Only admins and users explicitly assigned the Guest Inviter role can invite guests.",
+        audit_procedure=(
+            "MS Graph: GET /v1.0/policies/authorizationPolicy — verify "
+            "allowInvitesFrom == 'adminsAndGuestInviters' or 'none'."
+        ),
+        remediation=(
+            "Entra ID Portal → External Identities → External collaboration settings → "
+            "'Guest invite settings' → select 'Only users assigned to specific admin roles "
+            "can invite guest users' → Save."
+        ),
+        default_value="Everyone including guests can send invitations by default (everyone).",
+        references=[
+            "https://learn.microsoft.com/en-us/entra/external-id/external-collaboration-settings-configure",
+            "https://www.cisecurity.org/benchmark/azure",
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="6.8", title="Define and Maintain Role-Based Access Control", ig1=False, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        policy = data.get("authorization_policy")
+        if policy is None:
+            return self._skip("Authorization policy could not be retrieved.")
+        value = policy.get("allowInvitesFrom", "")
+        label = _LABELS.get(value, f"unknown ({value})")
+        evidence = [Evidence(
+            source="graph:policies/authorizationPolicy",
+            data={"allowInvitesFrom": value, "label": label},
+        )]
+        if value not in _COMPLIANT_VALUES:
+            return self._fail(
+                f"Guest invitations are not sufficiently restricted: '{label}' "
+                f"(allowInvitesFrom: '{value}').",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Guest invite restrictions are appropriately configured: '{label}'.",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_6_16", (AzureRule,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_6_16()
 _v4_stub("azure-cis-v4-6.17", "Ensure that 'Restrict access to Microsoft Entra admin center' is set to 'Yes'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.18", "Ensure that 'Restrict user ability to access groups features in My Groups' is set to 'Yes'", _SEC_ID, _MANUAL)
 _v4_stub("azure-cis-v4-6.19", "Ensure that 'Users can create security groups in Azure portals, API or PowerShell' is set to 'No'", _SEC_ID, _MANUAL)
@@ -470,13 +768,95 @@ _register_7_1_1_3()
 _v4(CIS_6_1_1_4, "azure-cis-v4-7.1.1.4", _DIAG)
 _v4(CIS_6_1_1_5, "azure-cis-v4-7.1.1.5", _DIAG)
 # 7.1.1.6: AppService HTTP logs (Automated) — v6 has no direct equivalent at this position
-_v4_stub(
-    "azure-cis-v4-7.1.1.6",
-    "Ensure that logging for Azure AppService 'HTTP logs' is enabled",
-    _DIAG,
-    _AUTO,
-    severity=Severity.MEDIUM,
-)
+def _register_7_1_1_6() -> None:
+    meta = RuleMetadata(
+        id="azure-cis-v4-7.1.1.6",
+        title="Ensure that logging for Azure AppService 'HTTP logs' is enabled",
+        section=_DIAG,
+        benchmark=_V4_BENCHMARK,
+        benchmark_version=_V4_VERSION,
+        assessment_status=_AUTO,
+        profiles=[CISProfile.AZURE_L1],
+        severity=Severity.MEDIUM,
+        description=(
+            "HTTP logging should be enabled on all Azure App Service web apps to capture "
+            "incoming HTTP request and response details for security auditing and "
+            "troubleshooting."
+        ),
+        rationale=(
+            "HTTP logs record client IP addresses, request URIs, response codes, and user "
+            "agents. Without them, it is impossible to audit access patterns, detect "
+            "enumeration or injection attempts, or investigate incidents on web applications."
+        ),
+        impact="Minor storage cost for log retention. Logs are written to the file system or a storage account.",
+        audit_procedure=(
+            "ARM: GET /subscriptions/{id}/resourceGroups/{rg}/providers/Microsoft.Web/sites/{name}/config/web "
+            "— verify properties.httpLoggingEnabled == true for every App Service."
+        ),
+        remediation=(
+            "Azure Portal → App Service → Monitoring → App Service logs → "
+            "set 'Web server logging' to 'File System' or 'Storage' → Save. "
+            "Or via CLI: az webapp log config --name <name> --resource-group <rg> "
+            "--web-server-logging filesystem."
+        ),
+        default_value="HTTP logging is disabled by default on new App Services.",
+        references=[
+            "https://learn.microsoft.com/en-us/azure/app-service/troubleshoot-diagnostic-logs",
+            "https://www.cisecurity.org/benchmark/azure",
+        ],
+        cis_controls=[
+            CISControl(version="v8", control_id="8.2", title="Collect Audit Logs", ig1=True, ig2=True, ig3=True),
+        ],
+    )
+
+    async def _check(self, data):
+        apps = data.get("web_apps")
+        if apps is None:
+            return self._skip("App Service list could not be retrieved.")
+        if not apps:
+            return self._skip("No App Services in subscription.")
+        configs = data.get("web_app_configs") or {}
+        offenders: list[str] = []
+        missing: list[str] = []
+        for app in apps:
+            app_id = app.get("id", "")
+            name = app.get("name", app_id)
+            cfg = configs.get(app_id.lower())
+            if cfg is None:
+                missing.append(name)
+                continue
+            http_logging = (cfg.get("properties") or {}).get("httpLoggingEnabled", False)
+            if not http_logging:
+                offenders.append(name)
+        evidence = [Evidence(
+            source="arm:Microsoft.Web/sites/config/web",
+            data={
+                "total": len(apps),
+                "http_logging_disabled": offenders,
+                "config_unavailable": missing,
+            },
+        )]
+        if missing and not offenders:
+            return self._skip(
+                f"Could not retrieve web config for {len(missing)} App Service(s) "
+                "— manual verification required."
+            )
+        if offenders:
+            return self._fail(
+                f"{len(offenders)} App Service(s) do not have HTTP logging enabled: "
+                f"{', '.join(offenders)}.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"All {len(apps)} App Service(s) have HTTP logging enabled.",
+            evidence=evidence,
+        )
+
+    cls = type("azure_cis_v4_7_1_1_6", (AzureRule,), {"metadata": meta, "check": _check})
+    registry.register(cls())
+
+
+_register_7_1_1_6()
 # v6 6.1.1.6 (VNet Flow Logs) → v4 7.1.1.7; v6 6.1.1.7-9 shift +1 accordingly
 _v4(CIS_6_1_1_6, "azure-cis-v4-7.1.1.7",  _DIAG)   # VNet flow logs
 _v4(CIS_6_1_1_7, "azure-cis-v4-7.1.1.8",  _DIAG)   # Entra Graph activity logs
