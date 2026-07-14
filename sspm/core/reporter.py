@@ -230,7 +230,7 @@ def to_sarif(scan_result: ScanResult) -> dict[str, Any]:
             {
                 "tool": {
                     "driver": {
-                        "name": "AccuKnox SSPM",
+                        "name": "SSPM",
                         "version": "0.1.0",
                         "organization": "AccuKnox",
                         "informationUri": "https://accuknox.com",
