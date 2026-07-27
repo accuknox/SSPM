@@ -1,8 +1,8 @@
 """
-CIS MS365 1.3.9 (L2) – Ensure that Bookings is restricted to internal users
-(Manual)
+CIS MS365 1.3.9 (L1) – Ensure shared bookings pages are restricted to select
+users (Automated)
 
-Profile Applicability: E3 Level 2, E5 Level 2
+Profile Applicability: E3 Level 1, E5 Level 1
 """
 
 from __future__ import annotations
@@ -23,40 +23,56 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_1_3_9(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-1.3.9",
-        title="Ensure that Bookings is restricted to internal users",
+        title="Ensure shared bookings pages are restricted to select users",
         section="1.3 Settings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
-        profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
+        assessment_status=AssessmentStatus.AUTOMATED,
+        profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.LOW,
         description=(
-            "Microsoft Bookings allows users to create publicly accessible booking "
-            "pages. This capability should be restricted to prevent exposure of "
-            "employee availability and information to unauthorized external users."
+            "Shared Bookings allows you to invite your team members and create "
+            "booking pages and let your customers book time with you and your "
+            "team. The recommended state is to restrict the "
+            "OwaMailboxPolicy-Default policy or disable Bookings at the "
+            "organization level."
         ),
         rationale=(
-            "Public Bookings pages expose employee availability and contact "
-            "information to anyone on the internet, which could be leveraged for "
-            "social engineering or spear phishing attacks."
+            "Shared Bookings pages can be exploited by threat actors to "
+            "impersonate legitimate users using convincing internal email "
+            "addresses. A compromised low-privilege account could be used to "
+            "mimic high-profile identities (e.g., the CEO) and bypass "
+            "impersonation filters to initiate fraudulent actions like fund "
+            "transfers."
         ),
         impact=(
-            "External customers will not be able to book appointments through "
-            "public-facing Bookings pages."
+            "Users will not be able to create new Bookings calendars/pages "
+            "unless explicitly permitted, and external customers will not be "
+            "able to book appointments if Bookings is disabled at the "
+            "organization level."
         ),
         audit_procedure=(
-            "Microsoft 365 admin center → Settings > Org settings > Bookings.\n"
-            "Verify that 'Allow your organization to use Bookings' is set to "
-            "'Only allow licensed users to create Bookings calendars' or is disabled.\n\n"
-            "Also verify 'Allow Bookings pages to be publicly accessible' is disabled.\n\n"
-            "There is no Microsoft Graph API for Bookings settings."
+            "Ensure Shared Bookings is turned off in the OWA Default policy. "
+            "If booking is disabled at the tenant (OrganizationConfig) level "
+            "this is also a compliant state.\n\n"
+            "To audit using PowerShell:\n"
+            "  1. Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "  2. Run: Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default | "
+            "fl BookingsMailboxCreationEnabled\n"
+            "  3. Ensure BookingsMailboxCreationEnabled is set to False.\n\n"
+            "Optionally: Get-OrganizationConfig | fl BookingsEnabled — if False, "
+            "also compliant."
         ),
         remediation=(
-            "Microsoft 365 admin center → Settings > Org settings > Bookings.\n"
-            "Restrict or disable the Bookings feature for external access."
+            "Exchange Online PowerShell:\n"
+            "  Set-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default "
+            "-BookingsMailboxCreationEnabled $false\n\n"
+            "Or disable Bookings entirely at the organization level:\n"
+            "  Set-OrganizationConfig -BookingsEnabled $false"
         ),
-        default_value="Bookings may be publicly accessible by default.",
+        default_value="BookingsMailboxCreationEnabled is True by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/bookings/bookings-faq",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/set-owamailboxpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -72,4 +88,22 @@ class CIS_1_3_9(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "owa_mailbox_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the OWA mailbox policy: "
+                f"{data.errors.get('owa_mailbox_policy')}"
+            )
+
+        # data.get("owa_mailbox_policy") returns None because the collector
+        # deliberately returns None for this key (no Graph endpoint exists;
+        # only Get-OwaMailboxPolicy via Exchange Online Remote PowerShell can
+        # read BookingsMailboxCreationEnabled).
+        return self._manual(
+            message=(
+                "Shared Bookings restriction cannot be read via Microsoft Graph. "
+                "Verify via Exchange Online PowerShell: "
+                "Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default | "
+                "fl BookingsMailboxCreationEnabled (should be False), or "
+                "Get-OrganizationConfig | fl BookingsEnabled (should be False)."
+            )
+        )

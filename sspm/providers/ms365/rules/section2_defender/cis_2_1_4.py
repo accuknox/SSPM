@@ -1,5 +1,5 @@
 """
-CIS MS365 2.1.4 (L1) – Ensure Safe Attachments policy is enabled (Manual)
+CIS MS365 2.1.4 (L1) – Ensure Safe Attachments policy is enabled (Automated)
 
 Profile Applicability: E5 Level 1
 """
@@ -25,7 +25,7 @@ class CIS_2_1_4(MS365Rule):
         title="Ensure Safe Attachments policy is enabled",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -44,24 +44,28 @@ class CIS_2_1_4(MS365Rule):
             "and size."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-SafeAttachmentPolicy | Select Name, Enable, Action, "
-            "ActionOnError, Redirect, RedirectAddress\n\n"
-            "Compliant: Enable = True, Action = Block or DynamicDelivery."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-SafeAttachmentPolicy | ft Identity, Enable, Action, "
+            "QuarantineTag\n\n"
+            "The highest-priority policy that applies to all users should have "
+            "Enable = True, Action = Block, and QuarantineTag = "
+            "AdminOnlyAccessPolicy."
         ),
         remediation=(
             "Microsoft Defender portal → Email & Collaboration > Policies & Rules > "
             "Threat policies > Safe Attachments.\n"
             "Create or edit a Safe Attachments policy:\n"
             "  • Enable the policy\n"
-            "  • Set action to 'Block' or 'Dynamic Delivery'\n"
+            "  • Set action to 'Block'\n"
             "  • Apply to all recipients\n\n"
             "PowerShell:\n"
-            "  Set-SafeAttachmentPolicy -Identity Default -Enable $true -Action Block"
+            "  Set-SafeAttachmentPolicy -Identity Default -Enable $true -Action Block "
+            "-QuarantineTag AdminOnlyAccessPolicy"
         ),
         default_value="Safe Attachments is not enabled by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/safe-attachments-about",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-safeattachmentpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -77,4 +81,21 @@ class CIS_2_1_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "safe_attachments_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Safe Attachments policies: "
+                f"{data.errors.get('safe_attachments_policies')}"
+            )
+
+        # Safe Attachments policy configuration cannot be read via Microsoft
+        # Graph; only Get-SafeAttachmentPolicy via Exchange Online Remote
+        # PowerShell exposes Enable, Action, and QuarantineTag.
+        return self._manual(
+            message=(
+                "Safe Attachments policy configuration cannot be read via "
+                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+                "Get-SafeAttachmentPolicy | ft Identity, Enable, Action, "
+                "QuarantineTag (the highest-priority policy should have "
+                "Enable=True, Action=Block, QuarantineTag=AdminOnlyAccessPolicy)."
+            )
+        )

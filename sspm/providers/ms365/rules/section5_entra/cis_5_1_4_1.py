@@ -47,7 +47,7 @@ class CIS_5_1_4_1(MS365Rule):
         audit_procedure=(
             "Using Microsoft Graph (beta):\n"
             "  GET /beta/policies/deviceRegistrationPolicy\n"
-            "  Check azureAdJoin.allowedToJoin.@odata.type:\n"
+            "  Check azureADJoin.allowedToJoin.@odata.type:\n"
             "  • 'AllowedToJoinAllUsersOrGroups' with specific groups = partial restriction\n"
             "  • 'AllowedToJoinNoUsers' or admin-only = compliant\n"
             "  • 'AllowedToJoinAllUsersOrGroups' with all users = non-compliant"
@@ -83,14 +83,16 @@ class CIS_5_1_4_1(MS365Rule):
                 "Requires Policy.Read.All permission (beta)."
             )
 
-        azure_ad_join = device_reg_policy.get("azureAdJoin") or {}
+        # Graph property is "azureADJoin" (capital AD); a prior lowercase-"Ad"
+        # lookup here silently always missed the field.
+        azure_ad_join = device_reg_policy.get("azureADJoin") or {}
         allowed_to_join = azure_ad_join.get("allowedToJoin") or {}
         join_type = allowed_to_join.get("@odata.type", "")
 
         evidence = [
             Evidence(
                 source="graph/beta/policies/deviceRegistrationPolicy",
-                data={"azureAdJoin.allowedToJoin": allowed_to_join},
+                data={"azureADJoin.allowedToJoin": allowed_to_join},
                 description="Device registration policy - Entra Join setting.",
             )
         ]

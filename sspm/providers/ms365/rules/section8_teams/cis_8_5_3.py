@@ -1,5 +1,6 @@
 """
-CIS MS365 8.5.3 (L1) – Ensure only org users bypass the lobby (Manual)
+CIS MS365 8.5.3 (L1) – Ensure only people in my org can bypass the lobby
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -22,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_8_5_3(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.5.3",
-        title="Ensure only org users bypass the lobby",
+        title="Ensure only people in my org can bypass the lobby",
         section="8.5 Teams Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -40,13 +41,13 @@ class CIS_8_5_3(MS365Rule):
         ),
         impact="External users must wait in the lobby before being admitted to meetings.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AutoAdmittedUsers\n\n"
-            "Compliant: AutoAdmittedUsers = 'OrganizerOnly' or 'InvitedUsers' (not 'Everyone')"
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl AutoAdmittedUsers\n\n"
+            "Ensure AutoAdmittedUsers is InvitedUsers or a more restrictive value "
+            "(EveryoneInCompanyExcludingGuests, OrganizerOnly)."
         ),
         remediation=(
             "Microsoft Teams PowerShell:\n"
-            "  Set-CsTeamsMeetingPolicy -AutoAdmittedUsers OrganizerOnly"
+            "  Set-CsTeamsMeetingPolicy -Identity Global -AutoAdmittedUsers InvitedUsers"
         ),
         default_value="AutoAdmittedUsers may allow everyone to bypass lobby.",
         references=[
@@ -66,4 +67,21 @@ class CIS_8_5_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        return self._manual(
+            message=(
+                "Lobby bypass settings cannot be read via Microsoft Graph. Verify "
+                "manually via Microsoft Teams PowerShell: Get-CsTeamsMeetingPolicy "
+                "-Identity Global | fl AutoAdmittedUsers — ensure it is InvitedUsers "
+                "or more restrictive (EveryoneInCompanyExcludingGuests, "
+                "OrganizerOnly)."
+            )
+        )

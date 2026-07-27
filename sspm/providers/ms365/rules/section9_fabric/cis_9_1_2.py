@@ -1,8 +1,11 @@
 """
-CIS MS365 9.1.2 (L1) – Ensure external user invitations to Microsoft Fabric
-are restricted (Manual)
+CIS MS365 9.1.2 (L1) – Ensure external user invitations are restricted
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
+
+Automated via the Fabric Admin REST API (GET /v1/admin/tenantsettings,
+settingName ExternalSharingV2).
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +27,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_9_1_2(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-9.1.2",
-        title="Ensure external user invitations to Microsoft Fabric are restricted",
+        title="Ensure external user invitations are restricted",
         section="9.1 Microsoft Fabric",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -41,10 +45,16 @@ class CIS_9_1_2(MS365Rule):
         ),
         impact="Users will not be able to invite external users to Fabric content directly.",
         audit_procedure=(
-            "Microsoft Fabric admin portal (app.powerbi.com/admin):\n"
-            "  Tenant settings > Export and sharing settings:\n"
-            "  Check 'Invite external users to your organization through Microsoft Fabric'\n\n"
-            "Compliant: Setting is disabled"
+            "Microsoft Fabric admin portal (app.powerbi.com/admin-portal):\n"
+            "  Tenant settings > Export and sharing settings.\n"
+            "  Ensure 'Users can invite guest users to collaborate through item "
+            "sharing and permissions' is Disabled, or Enabled with specific "
+            "security groups selected.\n\n"
+            "Via Fabric REST API (requires delegated Fabric.Admin.All auth):\n"
+            "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
+            "  Locate settingName ExternalSharingV2.\n"
+            "  Pass if enabled=false, or enabled=true AND "
+            "enabledSecurityGroups is non-empty."
         ),
         remediation=(
             "Microsoft Fabric admin portal → Tenant settings:\n"
@@ -67,5 +77,41 @@ class CIS_9_1_2(MS365Rule):
         tags=["fabric", "power-bi", "external-invitations", "data-analytics"],
     )
 
+    SETTING_NAME = "ExternalSharingV2"
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "fabric_tenant_settings" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Microsoft Fabric tenant settings: "
+                f"{data.errors.get('fabric_tenant_settings')}"
+            )
+
+        setting = self._get_fabric_setting(data, self.SETTING_NAME)
+        if setting is None:
+            return self._manual(
+                message=(
+                    "Microsoft Fabric tenant settings are not available "
+                    "(requires delegated Fabric.Admin.All authentication, not "
+                    "available via client-credentials Graph auth). Verify "
+                    f"manually: settingName {self.SETTING_NAME} in the Fabric "
+                    "admin portal > Tenant settings > Export and sharing settings."
+                )
+            )
+
+        evidence = [
+            Evidence(
+                source="fabric/v1/admin/tenantsettings",
+                data=setting,
+                description=f"Fabric tenant setting: {self.SETTING_NAME}",
+            )
+        ]
+        if self._fabric_restricted_or_disabled(setting):
+            return self._pass(
+                "External user invitations to Microsoft Fabric are restricted.",
+                evidence=evidence,
+            )
+        return self._fail(
+            "External user invitations to Microsoft Fabric are enabled for "
+            "the entire organization (not scoped to specific security groups).",
+            evidence=evidence,
+        )

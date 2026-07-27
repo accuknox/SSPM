@@ -5,6 +5,12 @@ Profile Applicability: E3 Level 1, E5 Level 1
 
 The Microsoft Purview unified audit log must be enabled so that administrator
 and user activity is recorded and available for security investigations.
+
+Per the official CIS audit procedure, this is read via Exchange Online /
+Security & Compliance PowerShell (Get-AdminAuditLogConfig ->
+UnifiedAuditLogIngestionEnabled). There is no Microsoft Graph field that
+reflects this specific setting — sign-in log query accessibility (previously
+used here as a proxy) does not actually verify it.
 """
 
 from __future__ import annotations
@@ -13,7 +19,6 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
-    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -46,11 +51,11 @@ class CIS_3_1_1(MS365Rule):
         impact="Minimal.  Audit logging has negligible performance impact.",
         audit_procedure=(
             "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
             "  Get-AdminAuditLogConfig | Select-Object UnifiedAuditLogIngestionEnabled\n"
-            "  Expected: UnifiedAuditLogIngestionEnabled = True\n\n"
-            "Or check via Microsoft Purview compliance portal:\n"
-            "  https://compliance.microsoft.com → Audit > Start recording user and "
-            "admin activity."
+            "  Ensure UnifiedAuditLogIngestionEnabled is True.\n\n"
+            "Microsoft Purview (https://purview.microsoft.com) → Solutions > Audit → "
+            "verify search results are returned for a recent activity."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -85,28 +90,20 @@ class CIS_3_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Purview audit log status is checked via Graph beta security endpoint
-        audit_settings = data.get("audit_log_settings")
-
-        if audit_settings is None:
+        if "admin_audit_log_config" in (data.errors or {}):
             return self._skip(
-                "Could not retrieve audit log settings. "
-                "Requires Compliance Administrator role."
+                "Could not retrieve Exchange admin audit log configuration: "
+                f"{data.errors.get('admin_audit_log_config')}"
             )
-
-        # If the API returned results (queries work), auditing is enabled
-        # A more precise check requires Exchange Online PowerShell
-        if isinstance(audit_settings, list):
-            return self._pass(
-                "Microsoft 365 unified audit log appears to be enabled "
-                "(audit log queries are accessible).",
-                evidence=[
-                    Evidence(
-                        source="graph/security/auditLog/queries",
-                        data={"queryable": True},
-                        description="Audit log API is accessible.",
-                    )
-                ],
+        # Get-AdminAuditLogConfig has no Microsoft Graph equivalent; it is
+        # only reachable via Exchange Online / Security & Compliance Remote
+        # PowerShell. Sign-in log query accessibility (a Graph signal) does
+        # not verify UnifiedAuditLogIngestionEnabled specifically.
+        return self._manual(
+            message=(
+                "UnifiedAuditLogIngestionEnabled cannot be read via Microsoft "
+                "Graph. Verify manually via Exchange Online PowerShell: "
+                "Get-AdminAuditLogConfig | Select-Object "
+                "UnifiedAuditLogIngestionEnabled — must be True."
             )
-
-        return self._manual()
+        )

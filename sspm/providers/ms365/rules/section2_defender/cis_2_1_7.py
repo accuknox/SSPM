@@ -1,5 +1,6 @@
 """
-CIS MS365 2.1.7 (L1) – Ensure an anti-phishing policy has been created (Manual)
+CIS MS365 2.1.7 (L1) – Ensure that an anti-phishing policy has been created
+(Automated)
 
 Profile Applicability: E5 Level 1
 """
@@ -22,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_2_1_7(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-2.1.7",
-        title="Ensure an anti-phishing policy has been created",
+        title="Ensure that an anti-phishing policy has been created",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -44,29 +45,41 @@ class CIS_2_1_7(MS365Rule):
             "forwarded emails."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-AntiPhishPolicy | Select Name, Enabled, EnableMailboxIntelligence, "
-            "EnableMailboxIntelligenceProtection, EnableSpoofIntelligence, "
-            "EnableOrganizationDomainsProtection, TargetedUsersToProtect\n\n"
-            "Compliant: A custom policy exists with key anti-phishing features enabled."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-AntiPhishPolicy | fl <fields> and Get-AntiPhishRule.\n\n"
+            "Verify a custom policy exists with: Enabled=True, "
+            "PhishThresholdLevel=3, EnableTargetedUserProtection=True, "
+            "EnableOrganizationDomainsProtection=True, "
+            "EnableMailboxIntelligence=True, "
+            "EnableMailboxIntelligenceProtection=True, "
+            "EnableSpoofIntelligence=True, "
+            "TargetedUserProtectionAction=Quarantine, "
+            "TargetedDomainProtectionAction=Quarantine, "
+            "MailboxIntelligenceProtectionAction=Quarantine, "
+            "EnableFirstContactSafetyTips=True, "
+            "EnableSimilarUsersSafetyTips=True, "
+            "EnableSimilarDomainsSafetyTips=True, "
+            "EnableUnusualCharactersSafetyTips=True, HonorDmarcPolicy=True."
         ),
         remediation=(
             "Microsoft Defender portal → Email & Collaboration > Policies & Rules > "
             "Threat policies > Anti-phishing.\n"
             "Create a new anti-phishing policy:\n"
             "  • Enable impersonation protection for key users and domains\n"
-            "  • Enable mailbox intelligence\n"
-            "  • Enable spoof intelligence\n"
-            "  • Configure action to quarantine or redirect\n\n"
+            "  • Enable mailbox intelligence and spoof intelligence\n"
+            "  • Enable safety tips\n"
+            "  • Configure action to quarantine\n\n"
             "PowerShell:\n"
             "  New-AntiPhishPolicy -Name 'Custom Anti-Phish' "
             "-EnableMailboxIntelligence $true "
             "-EnableMailboxIntelligenceProtection $true "
-            "-EnableSpoofIntelligence $true"
+            "-EnableSpoofIntelligence $true "
+            "-HonorDmarcPolicy $true"
         ),
         default_value="Only the default anti-phishing policy exists.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/anti-phishing-policies-mdo-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-antiphishpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -82,4 +95,24 @@ class CIS_2_1_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "anti_phishing_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve anti-phishing policies: "
+                f"{data.errors.get('anti_phishing_policies')}"
+            )
+
+        # Anti-phishing policy configuration cannot be read via Microsoft
+        # Graph; only Get-AntiPhishPolicy / Get-AntiPhishRule via Exchange
+        # Online Remote PowerShell expose these settings.
+        return self._manual(
+            message=(
+                "Anti-phishing policy configuration cannot be read via "
+                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+                "Get-AntiPhishPolicy | fl Enabled, PhishThresholdLevel, "
+                "EnableTargetedUserProtection, "
+                "EnableOrganizationDomainsProtection, "
+                "EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, "
+                "EnableSpoofIntelligence, HonorDmarcPolicy, and Get-AntiPhishRule "
+                "to confirm a custom policy is applied to all recipients."
+            )
+        )

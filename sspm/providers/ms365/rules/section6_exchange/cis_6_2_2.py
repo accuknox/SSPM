@@ -1,6 +1,6 @@
 """
-CIS MS365 6.2.2 (L1) – Ensure no mail transport rules exist to whitelist any
-domains (Manual)
+CIS MS365 6.2.2 (L1) – Ensure mail transport rules do not whitelist specific
+domains (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -23,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_2_2(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.2.2",
-        title="Ensure no mail transport rules exist to whitelist any domains",
-        section="6.2 Mail Transport",
+        title="Ensure mail transport rules do not whitelist specific domains",
+        section="6.2 Mail flow",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -41,10 +41,12 @@ class CIS_6_2_2(MS365Rule):
         ),
         impact="Removing domain whitelist rules means email from those domains will be filtered.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-TransportRule | Where-Object {$_.SetSCL -eq -1} | "
-            "Select-Object Name, Conditions, SetSCL\n\n"
-            "Compliant: No transport rules that set SCL = -1 (bypass spam filtering)."
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-TransportRule | Where-Object { $_.setscl -eq -1 -and "
+            "$_.SenderDomainIs -ne $null } | ft Name,SenderDomainIs,SetSCL\n\n"
+            "Compliant: no rule sets SCL to -1 (bypass spam filtering) for a "
+            "specific sender domain; no output is returned."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -69,4 +71,22 @@ class CIS_6_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Transport rules have no Graph API equivalent.  If collection
+        # errored, surface the error; otherwise always return MANUAL.
+        if "transport_rules" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange transport rules: "
+                f"{data.errors.get('transport_rules')}"
+            )
+
+        # data.get("transport_rules") returns None because the collector
+        # deliberately returns None for this key (no Graph endpoint exists).
+        return self._manual(
+            message=(
+                "Exchange transport rules cannot be read via Microsoft Graph. "
+                "Verify manually via Exchange Online PowerShell: "
+                "Get-TransportRule | Where-Object { $_.setscl -eq -1 -and "
+                "$_.SenderDomainIs -ne $null } - any rule returned indicates a "
+                "domain-whitelisting rule that bypasses spam filtering."
+            )
+        )

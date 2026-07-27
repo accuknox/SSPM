@@ -1,8 +1,16 @@
 """
-CIS MS365 5.2.4.1 (L1) – Ensure self-service password reset is enabled for all
-users (Automated)
+CIS MS365 5.2.4.1 (L1) – Ensure 'Self service password reset enabled' is set to
+'All' (Manual)
 
 Profile Applicability: E3 Level 1, E5 Level 1
+
+Per the official CIS Microsoft 365 Foundations Benchmark v6.0.1, this control's
+audit procedure is UI-only (Microsoft Entra admin center > Password reset >
+Properties > 'Self service password reset enabled' = 'All') with no published
+Microsoft Graph or PowerShell method. CIS therefore classifies it as Manual.
+Note: the Graph `authorizationPolicy.allowedToUseSSPR` flag only reflects
+whether SSPR is enabled at all (any/none), not whether it is scoped to 'All'
+users specifically, so it cannot be used to assert a pass/fail verdict here.
 """
 
 from __future__ import annotations
@@ -11,7 +19,6 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
-    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -24,10 +31,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_5_2_4_1(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-5.2.4.1",
-        title="Ensure self-service password reset is enabled for all users",
+        title="Ensure 'Self service password reset enabled' is set to 'All'",
         section="5.2.4 Password Reset",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.AUTOMATED,
+        assessment_status=AssessmentStatus.MANUAL,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -45,9 +52,8 @@ class CIS_5_2_4_1(MS365Rule):
             "authentication methods. Requires users to register SSPR methods."
         ),
         audit_procedure=(
-            "Microsoft Entra admin center → Protection > Password reset > Properties.\n"
-            "Verify 'Self-service password reset enabled' is set to 'All'.\n\n"
-            "Also verify the required number of authentication methods is set to 2."
+            "Microsoft Entra admin center → Entra ID > Password reset > Properties.\n"
+            "Ensure 'Self service password reset enabled' is set to 'All'."
         ),
         remediation=(
             "Microsoft Entra admin center → Protection > Password reset > Properties.\n"
@@ -73,33 +79,18 @@ class CIS_5_2_4_1(MS365Rule):
 
     async def check(self, data: CollectedData):
         auth_policy = data.get("authorization_policy")
-        if auth_policy is None:
-            return self._skip(
-                "Could not retrieve authorization policy. "
-                "Requires Policy.Read.All permission."
+        hint = ""
+        if auth_policy is not None and auth_policy.get("allowedToUseSSPR") is False:
+            hint = (
+                " Note: tenant-wide SSPR (allowedToUseSSPR) is currently disabled, "
+                "which already fails this control."
             )
 
-        sspr_enabled = auth_policy.get("allowedToUseSSPR")
-        evidence = [
-            Evidence(
-                source="graph/policies/authorizationPolicy",
-                data={"allowedToUseSSPR": sspr_enabled},
-                description="Tenant-wide SSPR enablement flag.",
+        return self._manual(
+            message=(
+                "CIS classifies this control as Manual: verify in the Microsoft "
+                "Entra admin center under Entra ID > Password reset > Properties "
+                "that 'Self service password reset enabled' is set to 'All'."
+                + hint
             )
-        ]
-
-        if sspr_enabled is True:
-            return self._pass(
-                "Self-service password reset is enabled for all users "
-                "(allowedToUseSSPR = true).",
-                evidence=evidence,
-            )
-        if sspr_enabled is False:
-            return self._fail(
-                "Self-service password reset is disabled "
-                "(allowedToUseSSPR = false).",
-                evidence=evidence,
-            )
-
-        # Field absent — fall back to manual guidance
-        return self._manual()
+        )

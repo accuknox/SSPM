@@ -1,5 +1,5 @@
 """
-CIS MS365 8.5.8 (L1) – Ensure external meeting chat is turned off (Manual)
+CIS MS365 8.5.8 (L1) – Ensure external meeting chat is off (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -22,10 +22,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_8_5_8(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.5.8",
-        title="Ensure external meeting chat is turned off",
+        title="Ensure external meeting chat is off",
         section="8.5 Teams Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -40,13 +40,14 @@ class CIS_8_5_8(MS365Rule):
         ),
         impact="External participants will not be able to use meeting chat.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object MeetingChatEnabledType\n\n"
-            "Compliant: Chat is restricted to authenticated internal users only."
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+            "AllowExternalNonTrustedMeetingChat\n\n"
+            "Ensure AllowExternalNonTrustedMeetingChat is False."
         ),
         remediation=(
-            "Microsoft Teams admin center → Meetings > Meeting policies.\n"
-            "Configure meeting chat settings to restrict external participants."
+            "Microsoft Teams PowerShell:\n"
+            "  Set-CsTeamsMeetingPolicy -Identity Global "
+            "-AllowExternalNonTrustedMeetingChat $false"
         ),
         default_value="External participants can use meeting chat by default.",
         references=[
@@ -66,4 +67,20 @@ class CIS_8_5_8(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        return self._manual(
+            message=(
+                "Whether external (non-trusted) meeting chat is enabled cannot be "
+                "read via Microsoft Graph. Verify manually via Microsoft Teams "
+                "PowerShell: Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                "AllowExternalNonTrustedMeetingChat — ensure it is False."
+            )
+        )

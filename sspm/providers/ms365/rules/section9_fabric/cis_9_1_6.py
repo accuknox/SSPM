@@ -1,8 +1,11 @@
 """
-CIS MS365 9.1.6 (L1) – Ensure sensitivity labels are applied to content in
-Microsoft Fabric (Manual)
+CIS MS365 9.1.6 (L1) – Ensure 'Allow users to apply sensitivity labels for
+content' is 'Enabled' (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
+
+Automated via the Fabric Admin REST API (GET /v1/admin/tenantsettings,
+settingName EimInformationProtectionEdit).
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +27,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_9_1_6(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-9.1.6",
-        title="Ensure sensitivity labels are applied to content in Microsoft Fabric",
+        title="Ensure 'Allow users to apply sensitivity labels for content' is 'Enabled'",
         section="9.1 Microsoft Fabric",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -40,9 +44,14 @@ class CIS_9_1_6(MS365Rule):
         ),
         impact="Content creators will be required to apply sensitivity labels to Fabric items.",
         audit_procedure=(
-            "Microsoft Fabric admin portal:\n"
-            "  Tenant settings > Information protection:\n"
-            "  Check if sensitivity labels are enabled for Fabric content"
+            "Microsoft Fabric admin portal (app.powerbi.com/admin-portal):\n"
+            "  Tenant settings > Information protection.\n"
+            "  Ensure 'Allow users to apply sensitivity labels for content' is "
+            "Enabled (optionally restricted to specific security groups).\n\n"
+            "Via Fabric REST API (requires delegated Fabric.Admin.All auth):\n"
+            "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
+            "  Locate settingName EimInformationProtectionEdit.\n"
+            "  Pass if enabled=true."
         ),
         remediation=(
             "Microsoft Fabric admin portal → Tenant settings > Information protection:\n"
@@ -65,5 +74,40 @@ class CIS_9_1_6(MS365Rule):
         tags=["fabric", "power-bi", "sensitivity-labels", "information-protection"],
     )
 
+    SETTING_NAME = "EimInformationProtectionEdit"
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "fabric_tenant_settings" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Microsoft Fabric tenant settings: "
+                f"{data.errors.get('fabric_tenant_settings')}"
+            )
+
+        setting = self._get_fabric_setting(data, self.SETTING_NAME)
+        if setting is None:
+            return self._manual(
+                message=(
+                    "Microsoft Fabric tenant settings are not available "
+                    "(requires delegated Fabric.Admin.All authentication, not "
+                    "available via client-credentials Graph auth). Verify "
+                    f"manually: settingName {self.SETTING_NAME} in the Fabric "
+                    "admin portal > Tenant settings > Information protection."
+                )
+            )
+
+        evidence = [
+            Evidence(
+                source="fabric/v1/admin/tenantsettings",
+                data=setting,
+                description=f"Fabric tenant setting: {self.SETTING_NAME}",
+            )
+        ]
+        if setting.get("enabled"):
+            return self._pass(
+                "Users are allowed to apply sensitivity labels for content.",
+                evidence=evidence,
+            )
+        return self._fail(
+            "Users are not allowed to apply sensitivity labels for content.",
+            evidence=evidence,
+        )

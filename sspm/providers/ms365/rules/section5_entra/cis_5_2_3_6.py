@@ -44,9 +44,9 @@ class CIS_5_2_3_6(MS365Rule):
             "accustomed to using."
         ),
         audit_procedure=(
-            "GET /policies/authenticationMethodsPolicy\n"
-            "Check: systemCredentialPreferences.excludeTargets is empty or contains "
-            "no exclusions, and state = 'enabled'"
+            "GET /beta/policies/authenticationMethodsPolicy\n"
+            "(Invoke-MgGraphRequest ...).systemCredentialPreferences\n"
+            "Ensure includeTargets contains 'all_users' and state is 'enabled'."
         ),
         remediation=(
             "Microsoft Entra admin center → Protection > Authentication methods > "
@@ -79,34 +79,39 @@ class CIS_5_2_3_6(MS365Rule):
             )
 
         sys_cred_prefs = auth_methods_policy.get("systemCredentialPreferences") or {}
-        state = sys_cred_prefs.get("state", "").lower()
-        exclude_targets = sys_cred_prefs.get("excludeTargets") or []
+        state = (sys_cred_prefs.get("state") or "").lower()
+        include_targets = sys_cred_prefs.get("includeTargets") or []
+        includes_all_users = any(
+            t.get("id") == "all_users" for t in include_targets
+        )
 
         evidence = [
             Evidence(
-                source="graph/policies/authenticationMethodsPolicy",
+                source="graph/beta/policies/authenticationMethodsPolicy",
                 data={
                     "systemCredentialPreferences.state": state,
-                    "excludeTargets": len(exclude_targets),
+                    "includeTargets": include_targets,
                 },
                 description="System credential preferences configuration.",
             )
         ]
 
-        if state == "enabled":
-            if not exclude_targets:
-                return self._pass(
-                    "System-preferred MFA is enabled with no exclusions.",
-                    evidence=evidence,
-                )
+        if state == "enabled" and includes_all_users:
             return self._pass(
-                f"System-preferred MFA is enabled (with {len(exclude_targets)} excluded targets).",
+                "System-preferred MFA is enabled for all users.",
                 evidence=evidence,
             )
 
         if state == "disabled":
             return self._fail(
                 "System-preferred MFA is disabled. Users may be prompted for weaker MFA methods.",
+                evidence=evidence,
+            )
+
+        if state == "enabled" and not includes_all_users:
+            return self._fail(
+                "System-preferred MFA is enabled but not scoped to all users "
+                "(includeTargets does not contain 'all_users').",
                 evidence=evidence,
             )
 

@@ -1,6 +1,6 @@
 """
-CIS MS365 1.3.3 (L2) – Ensure external sharing of calendars is not enabled
-(Automated)
+CIS MS365 1.3.3 (L2) – Ensure 'External sharing' of calendars is not
+available (Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
 """
@@ -11,7 +11,6 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
-    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -24,7 +23,7 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_1_3_3(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-1.3.3",
-        title="Ensure external sharing of calendars is not enabled",
+        title="Ensure 'External sharing' of calendars is not available",
         section="1.3 Settings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
         assessment_status=AssessmentStatus.AUTOMATED,
@@ -79,7 +78,18 @@ class CIS_1_3_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Calendar sharing is controlled via Exchange Online sharing policies
-        # which are not available through Microsoft Graph API.
-        # This requires Exchange Online PowerShell.
-        return self._manual()
+        if "sharing_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange sharing policy: "
+                f"{data.errors.get('sharing_policy')}"
+            )
+        # Get-SharingPolicy has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.
+        return self._manual(
+            message=(
+                "Calendar external sharing cannot be read via Microsoft Graph. "
+                "Verify manually via Exchange Online PowerShell: "
+                "Get-SharingPolicy -Identity 'Default Sharing Policy' | ft "
+                "Name,Enabled — Enabled must be False."
+            )
+        )

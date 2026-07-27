@@ -1,8 +1,14 @@
 """
 CIS MS365 5.1.2.5 (L2) – Ensure the option to remain signed in is hidden
-(Automated)
+(Manual)
 
 Profile Applicability: E3 Level 2, E5 Level 2
+
+Per the official CIS Microsoft 365 Foundations Benchmark v6.0.1, this control's
+audit procedure is UI-only (Microsoft Entra admin center > Identity > Overview >
+Company branding > User settings > Show keep user signed in) with no published
+Microsoft Graph or PowerShell field that reflects this specific setting. CIS
+therefore classifies it as a Manual control.
 """
 
 from __future__ import annotations
@@ -26,7 +32,7 @@ class CIS_5_1_2_5(MS365Rule):
         title="Ensure the option to remain signed in is hidden",
         section="5.1.2 Account Management",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.AUTOMATED,
+        assessment_status=AssessmentStatus.MANUAL,
         profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.LOW,
         description=(
@@ -44,12 +50,11 @@ class CIS_5_1_2_5(MS365Rule):
             "session lifetimes, requiring more frequent re-authentication."
         ),
         audit_procedure=(
-            "Microsoft Entra admin center → Identity > Overview > Company branding.\n"
-            "Check the 'Sign-in page' settings:\n"
-            "  Show option to remain signed in: should be No/hidden.\n\n"
-            "Via Microsoft Graph:\n"
-            "  GET /organization/{id}/branding\n"
-            "  Check hideKeepMeSignedIn property."
+            "Microsoft Entra admin center (https://entra.microsoft.com) → "
+            "Entra ID > Users > User settings.\n"
+            "Ensure 'Show keep user signed in' is set to No.\n\n"
+            "No Microsoft Graph or PowerShell field exposes this setting; CIS "
+            "classifies this control as Manual."
         ),
         remediation=(
             "Microsoft Entra admin center → Identity > Overview > Company branding.\n"
@@ -74,32 +79,10 @@ class CIS_5_1_2_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        branding = data.get("branding")
-        if branding:
-            hide_kmsi = branding.get("hideKeepMeSignedIn")
-            if hide_kmsi is True:
-                from sspm.core.models import Evidence
-                return self._pass(
-                    "The 'Stay signed in?' option is hidden (hideKeepMeSignedIn = true).",
-                    evidence=[
-                        Evidence(
-                            source="graph/organization/branding",
-                            data={"hideKeepMeSignedIn": hide_kmsi},
-                            description="Company branding sign-in setting.",
-                        )
-                    ],
-                )
-            elif hide_kmsi is False:
-                from sspm.core.models import Evidence
-                return self._fail(
-                    "The 'Stay signed in?' option is shown (hideKeepMeSignedIn = false).",
-                    evidence=[
-                        Evidence(
-                            source="graph/organization/branding",
-                            data={"hideKeepMeSignedIn": hide_kmsi},
-                            description="Company branding sign-in setting.",
-                        )
-                    ],
-                )
-
-        return self._manual()
+        return self._manual(
+            message=(
+                "CIS classifies this control as Manual: verify in the Microsoft "
+                "Entra admin center under Entra ID > Users > User settings that "
+                "'Show keep user signed in' is set to No."
+            )
+        )

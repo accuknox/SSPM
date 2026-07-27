@@ -1,6 +1,6 @@
 """
-CIS MS365 6.3.1 (L2) – Ensure users cannot install add-ins in Outlook
-(Manual)
+CIS MS365 6.3.1 (L2) – Ensure users installing Outlook add-ins is not allowed
+(Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
 """
@@ -23,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_3_1(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.3.1",
-        title="Ensure users cannot install add-ins in Outlook",
+        title="Ensure users installing Outlook add-ins is not allowed",
         section="6.3 Add-ins",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.LOW,
         description=(
@@ -41,10 +41,15 @@ class CIS_6_3_1(MS365Rule):
         ),
         impact="Users must request admin deployment of Outlook add-ins.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-RoleAssignmentPolicy | Select Name, AssignedRoles\n"
-            "  Look for policies with 'My Custom Apps' or 'My Marketplace Apps' roles\n\n"
-            "Compliant: No users have 'My Custom Apps' or 'My Marketplace Apps' roles."
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-EXOMailbox -PropertySets Policy | Select-Object -Unique "
+            "RoleAssignmentPolicy\n"
+            "  For each policy returned: Get-RoleAssignmentPolicy -Identity "
+            "<policy>\n\n"
+            "Compliant: 'My Custom Apps', 'My Marketplace Apps', and 'My "
+            "ReadWriteMailbox Apps' are NOT present in AssignedRoles for any "
+            "policy."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -70,4 +75,20 @@ class CIS_6_3_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-RoleAssignmentPolicy has no Microsoft Graph equivalent; it is
+        # only reachable via Exchange Online Remote PowerShell.
+        if "role_assignment_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange role assignment policies: "
+                f"{data.errors.get('role_assignment_policies')}"
+            )
+
+        return self._manual(
+            message=(
+                "Role assignment policies cannot be read via Microsoft Graph. "
+                "Verify manually via Exchange Online PowerShell: "
+                "Get-RoleAssignmentPolicy - ensure 'My Custom Apps', "
+                "'My Marketplace Apps', and 'My ReadWriteMailbox Apps' are not "
+                "present in AssignedRoles for any policy."
+            )
+        )

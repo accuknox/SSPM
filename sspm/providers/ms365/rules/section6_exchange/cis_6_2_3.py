@@ -1,6 +1,6 @@
 """
-CIS MS365 6.2.3 (L1) – Ensure external sender identification in Outlook is
-enabled (Manual)
+CIS MS365 6.2.3 (L1) – Ensure email from external senders is identified
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -23,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_2_3(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.2.3",
-        title="Ensure external sender identification in Outlook is enabled",
-        section="6.2 Mail Transport",
+        title="Ensure email from external senders is identified",
+        section="6.2 Mail flow",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -41,9 +41,11 @@ class CIS_6_2_3(MS365Rule):
         ),
         impact="Users will see a visual indicator on emails from external senders.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-ExternalInOutlook | Select-Object Enabled\n\n"
-            "Compliant: Enabled = True"
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-ExternalInOutlook\n\n"
+            "For each identity verify Enabled = True and that AllowList only "
+            "contains explicitly permitted addresses/domains."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -67,4 +69,19 @@ class CIS_6_2_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-ExternalInOutlook has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.
+        if "external_in_outlook" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve external sender identification settings: "
+                f"{data.errors.get('external_in_outlook')}"
+            )
+
+        return self._manual(
+            message=(
+                "External sender identification settings cannot be read via "
+                "Microsoft Graph. Verify manually via Exchange Online PowerShell: "
+                "Get-ExternalInOutlook - Enabled must be True, and AllowList "
+                "should only contain explicitly permitted addresses."
+            )
+        )

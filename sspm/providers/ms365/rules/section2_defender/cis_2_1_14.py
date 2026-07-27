@@ -1,6 +1,6 @@
 """
-CIS MS365 2.1.14 (L1) – Ensure the inbound anti-spam policy does not contain
-allowed domains (Manual)
+CIS MS365 2.1.14 (L1) – Ensure inbound anti-spam policies do not contain
+allowed domains (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -23,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_2_1_14(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-2.1.14",
-        title="Ensure the inbound anti-spam policy does not contain allowed domains",
+        title="Ensure inbound anti-spam policies do not contain allowed domains",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -44,9 +44,10 @@ class CIS_2_1_14(MS365Rule):
             "This may cause some legitimate emails to be marked as spam initially."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-HostedContentFilterPolicy | Select Name, AllowedSenderDomains\n\n"
-            "Compliant: AllowedSenderDomains should be empty or $null for all policies."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-HostedContentFilterPolicy | ft Identity, "
+            "AllowedSenderDomains\n\n"
+            "Ensure AllowedSenderDomains is undefined for each inbound policy."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -56,6 +57,7 @@ class CIS_2_1_14(MS365Rule):
         default_value="AllowedSenderDomains is empty by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/anti-spam-policies-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-hostedcontentfilterpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -71,4 +73,21 @@ class CIS_2_1_14(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "hosted_content_filter_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the hosted content filter policy: "
+                f"{data.errors.get('hosted_content_filter_policy')}"
+            )
+
+        # Hosted content filter policy configuration cannot be read via
+        # Microsoft Graph; only Get-HostedContentFilterPolicy via Exchange
+        # Online Remote PowerShell exposes AllowedSenderDomains.
+        return self._manual(
+            message=(
+                "Inbound anti-spam allowed sender domains cannot be read via "
+                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+                "Get-HostedContentFilterPolicy | ft Identity, "
+                "AllowedSenderDomains (should be undefined/empty for every "
+                "inbound policy)."
+            )
+        )

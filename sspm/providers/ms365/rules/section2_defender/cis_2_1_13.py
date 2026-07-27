@@ -1,5 +1,6 @@
 """
-CIS MS365 2.1.13 (L1) – Ensure the connection filter safe list is off (Manual)
+CIS MS365 2.1.13 (L1) – Ensure the connection filter safe list is off
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -25,7 +26,7 @@ class CIS_2_1_13(MS365Rule):
         title="Ensure the connection filter safe list is off",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -43,9 +44,10 @@ class CIS_2_1_13(MS365Rule):
             "be subject to normal spam filtering."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-HostedConnectionFilterPolicy -Identity Default | Select EnableSafeList\n\n"
-            "Compliant: EnableSafeList = False."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-HostedConnectionFilterPolicy -Identity Default | "
+            "fl EnableSafeList\n\n"
+            "Ensure EnableSafeList is False."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -54,6 +56,7 @@ class CIS_2_1_13(MS365Rule):
         default_value="EnableSafeList is disabled by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/connection-filter-policies-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-hostedconnectionfilterpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -69,4 +72,20 @@ class CIS_2_1_13(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "hosted_connection_filter_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the hosted connection filter policy: "
+                f"{data.errors.get('hosted_connection_filter_policy')}"
+            )
+
+        # Hosted connection filter policy configuration cannot be read via
+        # Microsoft Graph; only Get-HostedConnectionFilterPolicy via Exchange
+        # Online Remote PowerShell exposes EnableSafeList.
+        return self._manual(
+            message=(
+                "The connection filter safe list setting cannot be read via "
+                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+                "Get-HostedConnectionFilterPolicy -Identity Default | "
+                "fl EnableSafeList (should be False)."
+            )
+        )

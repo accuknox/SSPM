@@ -36,10 +36,47 @@ Graph API:
     "role_management_policies"      – PIM role management policies
     "access_reviews"                – Identity Governance access review definitions
     "fabric_tenant_settings"        – Microsoft Fabric (no Graph API → None)
+    "password_protection_settings"  – Entra Password Protection group setting
+                                       (banned password lists, on-prem AD mode)
+    "forms_settings"                – Microsoft Forms org settings (beta)
+    "third_party_storage_service_principal" – service principal for the
+                                       "third-party storage in Office on the
+                                       web" integration (CIS 1.3.7)
+
+Exchange Online / Microsoft Teams PowerShell (no Graph or REST API exists for
+these; Exchange Online Management and MicrosoftTeams are Remote PowerShell
+modules with no Microsoft Graph equivalent, so client-credentials Graph auth
+cannot reach them — all return None):
+    "owa_mailbox_policy"             – Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default
+    "admin_audit_log_config"         – Get-AdminAuditLogConfig
+    "sharing_policy"                 – Get-SharingPolicy -Identity "Default Sharing Policy"
+    "b2b_invitation_domains_policy"  – legacy B2B allow/block domain list
+                                       (beta/legacy/policies, real Graph API)
+    "organization_config"            – Get-OrganizationConfig
+    "transport_config"               – Get-TransportConfig
+    "malware_filter_policy"          – Get-MalwareFilterPolicy / Get-MalwareFilterRule
+    "atp_policy_for_o365"            – Get-AtpPolicyForO365
+    "hosted_outbound_spam_filter_policy" – Get-HostedOutboundSpamFilterPolicy
+    "hosted_connection_filter_policy" – Get-HostedConnectionFilterPolicy -Identity Default
+    "hosted_content_filter_policy"   – Get-HostedContentFilterPolicy
+    "priority_account_protection"    – Defender portal only (no PowerShell/Graph method published)
+    "preset_security_policies"       – Defender portal only (no PowerShell/Graph method published)
+    "teams_protection_policy"        – Get-TeamsProtectionPolicy / Get-TeamsProtectionPolicyRule
+    "mailbox_audit_settings"         – Get-EXOMailbox -PropertySets Audit
+    "mailbox_audit_bypass_association" – Get-MailboxAuditBypassAssociation
+    "external_in_outlook"            – Get-ExternalInOutlook
+    "role_assignment_policies"       – Get-RoleAssignmentPolicy
+    "teams_client_configuration"     – Get-CsTeamsClientConfiguration -Identity Global
+    "teams_external_access_policy"   – Get-CsExternalAccessPolicy -Identity Global
+    "teams_tenant_federation_configuration" – Get-CsTenantFederationConfiguration
+    "teams_meeting_policy"           – Get-CsTeamsMeetingPolicy -Identity Global
+    "teams_messaging_policy"         – Get-CsTeamsMessagingPolicy -Identity Global
+    "report_submission_policy"       – Get-ReportSubmissionPolicy
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -165,6 +202,10 @@ class MS365Collector:
         await self._safe_collect(
             "cross_tenant_access_policy", self._get_cross_tenant_access_policy()
         )
+        await self._safe_collect(
+            "b2b_invitation_domains_policy",
+            self._get_b2b_invitation_domains_policy(),
+        )
         await self._safe_collect("branding", self._get_branding())
         await self._safe_collect(
             "safe_links_policies", self._get_safe_links_policies()
@@ -202,6 +243,78 @@ class MS365Collector:
         await self._safe_collect("access_reviews", self._get_access_reviews())
         await self._safe_collect(
             "fabric_tenant_settings", self._get_fabric_tenant_settings()
+        )
+        await self._safe_collect(
+            "password_protection_settings",
+            self._get_password_protection_settings(),
+        )
+        await self._safe_collect("forms_settings", self._get_forms_settings())
+        await self._safe_collect(
+            "third_party_storage_service_principal",
+            self._get_third_party_storage_service_principal(),
+        )
+
+        # Exchange Online / Teams Remote PowerShell data (no Graph equivalent).
+        await self._safe_collect("owa_mailbox_policy", self._get_owa_mailbox_policy())
+        await self._safe_collect(
+            "admin_audit_log_config", self._get_admin_audit_log_config()
+        )
+        await self._safe_collect("sharing_policy", self._get_sharing_policy())
+        await self._safe_collect("organization_config", self._get_organization_config())
+        await self._safe_collect("transport_config", self._get_transport_config())
+        await self._safe_collect("malware_filter_policy", self._get_malware_filter_policy())
+        await self._safe_collect("atp_policy_for_o365", self._get_atp_policy_for_o365())
+        await self._safe_collect(
+            "hosted_outbound_spam_filter_policy",
+            self._get_hosted_outbound_spam_filter_policy(),
+        )
+        await self._safe_collect(
+            "hosted_connection_filter_policy",
+            self._get_hosted_connection_filter_policy(),
+        )
+        await self._safe_collect(
+            "hosted_content_filter_policy", self._get_hosted_content_filter_policy()
+        )
+        await self._safe_collect(
+            "priority_account_protection", self._get_priority_account_protection()
+        )
+        await self._safe_collect(
+            "preset_security_policies", self._get_preset_security_policies()
+        )
+        await self._safe_collect(
+            "teams_protection_policy", self._get_teams_protection_policy()
+        )
+        await self._safe_collect(
+            "mailbox_audit_settings", self._get_mailbox_audit_settings()
+        )
+        await self._safe_collect(
+            "mailbox_audit_bypass_association",
+            self._get_mailbox_audit_bypass_association(),
+        )
+        await self._safe_collect(
+            "external_in_outlook", self._get_external_in_outlook()
+        )
+        await self._safe_collect(
+            "role_assignment_policies", self._get_role_assignment_policies()
+        )
+        await self._safe_collect(
+            "teams_client_configuration", self._get_teams_client_configuration()
+        )
+        await self._safe_collect(
+            "teams_external_access_policy", self._get_teams_external_access_policy()
+        )
+        await self._safe_collect(
+            "teams_tenant_federation_configuration",
+            self._get_teams_tenant_federation_configuration(),
+        )
+        await self._safe_collect(
+            "teams_meeting_policy", self._get_teams_meeting_policy()
+        )
+        await self._safe_collect(
+            "teams_messaging_policy", self._get_teams_messaging_policy()
+        )
+        await self._safe_collect(
+            "report_submission_policy", self._get_report_submission_policy()
         )
 
     # --- Individual collectors ---
@@ -275,6 +388,30 @@ class MS365Collector:
 
     async def _get_cross_tenant_access_policy(self):
         return await self._get(f"{_GRAPH}/policies/crossTenantAccessPolicy")
+
+    async def _get_b2b_invitation_domains_policy(self):
+        # Legacy directory policies expose the B2B invitation allow/block
+        # domain list (CIS 5.1.6.1), which has no modern Graph API
+        # equivalent. Requires Policy.Read.All.
+        #   GET /beta/legacy/policies
+        #   filter value[].type == 'B2BManagementPolicy'
+        #   each matching policy's "definition" is a list of JSON-encoded
+        #   strings; parse for B2BManagementPolicy.InvitationsAllowedAndBlockedDomainsPolicy
+        result = await self._get(f"{_GRAPH_BETA}/legacy/policies")
+        policies = result if isinstance(result, list) else []
+        for policy in policies:
+            if policy.get("type") != "B2BManagementPolicy":
+                continue
+            for raw in policy.get("definition") or []:
+                try:
+                    parsed = json.loads(raw)
+                except (TypeError, ValueError):
+                    continue
+                b2b = parsed.get("B2BManagementPolicy") or {}
+                domains_policy = b2b.get("InvitationsAllowedAndBlockedDomainsPolicy")
+                if domains_policy is not None:
+                    return domains_policy
+        return None
 
     async def _get_branding(self):
         # Requires organisation ID collected earlier.
@@ -393,6 +530,118 @@ class MS365Collector:
         return await self._get(
             f"{_GRAPH}/identityGovernance/accessReviews/definitions"
         )
+
+    # --- Exchange Online / Teams Remote PowerShell (no Graph equivalent) ---
+    #
+    # Exchange Online Management and MicrosoftTeams are Remote PowerShell
+    # modules (Connect-ExchangeOnline / Connect-MicrosoftTeams). They are not
+    # part of Microsoft Graph and cannot be reached with this collector's
+    # client-credentials Graph auth. These all return None so rules can
+    # distinguish "not collected" and produce a MANUAL finding with a
+    # precise pointer to the required PowerShell cmdlet.
+
+    async def _get_owa_mailbox_policy(self):
+        return None
+
+    async def _get_admin_audit_log_config(self):
+        return None
+
+    async def _get_sharing_policy(self):
+        return None
+
+    async def _get_organization_config(self):
+        return None
+
+    async def _get_transport_config(self):
+        return None
+
+    async def _get_malware_filter_policy(self):
+        return None
+
+    async def _get_atp_policy_for_o365(self):
+        return None
+
+    async def _get_hosted_outbound_spam_filter_policy(self):
+        return None
+
+    async def _get_hosted_connection_filter_policy(self):
+        return None
+
+    async def _get_hosted_content_filter_policy(self):
+        return None
+
+    async def _get_priority_account_protection(self):
+        return None
+
+    async def _get_preset_security_policies(self):
+        return None
+
+    async def _get_teams_protection_policy(self):
+        return None
+
+    async def _get_mailbox_audit_settings(self):
+        return None
+
+    async def _get_mailbox_audit_bypass_association(self):
+        return None
+
+    async def _get_external_in_outlook(self):
+        return None
+
+    async def _get_role_assignment_policies(self):
+        return None
+
+    async def _get_teams_client_configuration(self):
+        return None
+
+    async def _get_teams_external_access_policy(self):
+        return None
+
+    async def _get_teams_tenant_federation_configuration(self):
+        return None
+
+    async def _get_teams_meeting_policy(self):
+        return None
+
+    async def _get_teams_messaging_policy(self):
+        return None
+
+    async def _get_report_submission_policy(self):
+        return None
+
+    async def _get_password_protection_settings(self):
+        # Entra Password Protection (banned password lists, on-prem AD proxy
+        # mode) is exposed via the tenant-wide "Password Rule Settings"
+        # directory setting template (CIS 5.2.3.2 / 5.2.3.3):
+        #   GET /groupSettings
+        #   filter to templateId == 5cf42378-d67d-4f36-ba46-e8b86229381d
+        # Requires Directory.Read.All (or GroupSettings.Read.All).
+        template_id = "5cf42378-d67d-4f36-ba46-e8b86229381d"
+        settings = await self._get(f"{_GRAPH}/groupSettings") or []
+        for setting in settings:
+            if setting.get("templateId") == template_id:
+                return {v["name"]: v["value"] for v in setting.get("values", [])}
+        return None
+
+    async def _get_forms_settings(self):
+        # Microsoft Forms org settings (CIS 1.3.5): internal phishing scanning.
+        # Requires OrgSettings-Forms.Read.All (beta endpoint only).
+        return await self._get(f"{_GRAPH_BETA}/admin/forms/settings")
+
+    async def _get_third_party_storage_service_principal(self):
+        # CIS 1.3.7: "third-party storage services in Microsoft 365 on the
+        # web" is gated by a first-party service principal. If it does not
+        # exist, or exists but is disabled, third-party storage is blocked.
+        # Requires Application.Read.All.
+        result = await self._get(
+            f"{_GRAPH}/servicePrincipals",
+            params={
+                "$filter": "appId eq 'c1f33bc0-bdb4-4248-ba9b-096807ddb43e'",
+            },
+        )
+        if isinstance(result, list):
+            return result[0] if result else None
+        return result
 
     async def _get_fabric_tenant_settings(self):
         # Fabric tenant settings are not available through Microsoft Graph.

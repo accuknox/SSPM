@@ -1,6 +1,6 @@
 """
-CIS MS365 8.1.2 (L2) – Ensure users cannot send emails to a channel email
-address (Manual)
+CIS MS365 8.1.2 (L2) – Ensure users can't send emails to a channel email
+address (Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
 """
@@ -23,10 +23,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_8_1_2(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.1.2",
-        title="Ensure users cannot send emails to a channel email address",
+        title="Ensure users can't send emails to a channel email address",
         section="8.1 Teams Client Configuration",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.LOW,
         description=(
@@ -41,15 +41,13 @@ class CIS_8_1_2(MS365Rule):
         ),
         impact="Users will not be able to send email messages to Teams channels.",
         audit_procedure=(
-            "Microsoft Teams admin center → Teams > Teams settings.\n"
-            "Check: 'Email integration' > Allow users to send emails to a channel "
-            "email address = Disabled.\n\n"
-            "Teams PowerShell:\n"
-            "  Get-CsTeamsClientConfiguration | Select-Object AllowEmailIntoChannel"
+            "Connect-MicrosoftTeams.\n"
+            "  Get-CsTeamsClientConfiguration -Identity Global | fl AllowEmailIntoChannel\n\n"
+            "Verify that AllowEmailIntoChannel is False."
         ),
         remediation=(
             "Microsoft Teams PowerShell:\n"
-            "  Set-CsTeamsClientConfiguration -AllowEmailIntoChannel $false"
+            "  Set-CsTeamsClientConfiguration -Identity Global -AllowEmailIntoChannel $false"
         ),
         default_value="Email into channel may be enabled by default.",
         references=[
@@ -69,4 +67,20 @@ class CIS_8_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsClientConfiguration is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_client_configuration" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams client configuration: "
+                f"{data.errors.get('teams_client_configuration')}"
+            )
+
+        return self._manual(
+            message=(
+                "Channel email integration cannot be read via Microsoft Graph. "
+                "Verify manually via Microsoft Teams PowerShell: "
+                "Connect-MicrosoftTeams; Get-CsTeamsClientConfiguration -Identity "
+                "Global | fl AllowEmailIntoChannel — ensure it is False."
+            )
+        )

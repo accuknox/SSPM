@@ -1,5 +1,5 @@
 """
-CIS MS365 6.5.2 (L2) – Ensure MailTips are enabled for end users (Manual)
+CIS MS365 6.5.2 (L2) – Ensure MailTips are enabled for end users (Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
 """
@@ -25,7 +25,7 @@ class CIS_6_5_2(MS365Rule):
         title="Ensure MailTips are enabled for end users",
         section="6.5 Client Access",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.LOW,
         description=(
@@ -40,11 +40,14 @@ class CIS_6_5_2(MS365Rule):
         ),
         impact="No negative impact; MailTips provide helpful reminders to users.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-OrganizationConfig | Select-Object MailTipsAllTipsEnabled, "
-            "MailTipsExternalRecipientsTipsEnabled, MailTipsGroupMetricsEnabled, "
-            "MailTipsLargeAudienceThreshold\n\n"
-            "Compliant: MailTipsAllTipsEnabled = True"
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-OrganizationConfig | fl MailTips*\n\n"
+            "Compliant: MailTipsAllTipsEnabled = True, "
+            "MailTipsExternalRecipientsTipsEnabled = True, "
+            "MailTipsGroupMetricsEnabled = True, and "
+            "MailTipsLargeAudienceThreshold is set to an acceptable value "
+            "(default 25)."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -70,4 +73,22 @@ class CIS_6_5_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-OrganizationConfig has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.
+        if "organization_config" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange organization configuration: "
+                f"{data.errors.get('organization_config')}"
+            )
+
+        return self._manual(
+            message=(
+                "MailTips settings cannot be read via Microsoft Graph. Verify "
+                "manually via Exchange Online PowerShell: Get-OrganizationConfig "
+                "| fl MailTips* - MailTipsAllTipsEnabled, "
+                "MailTipsExternalRecipientsTipsEnabled, and "
+                "MailTipsGroupMetricsEnabled must be True, and "
+                "MailTipsLargeAudienceThreshold should be set appropriately "
+                "(default 25)."
+            )
+        )

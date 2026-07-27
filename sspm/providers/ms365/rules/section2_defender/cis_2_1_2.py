@@ -1,6 +1,6 @@
 """
 CIS MS365 2.1.2 (L1) – Ensure the Common Attachment Types Filter is enabled
-(Manual)
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -26,7 +26,7 @@ class CIS_2_1_2(MS365Rule):
         title="Ensure the Common Attachment Types Filter is enabled",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -45,10 +45,10 @@ class CIS_2_1_2(MS365Rule):
             "alternative delivery methods."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-MalwareFilterPolicy | Select Name, EnableFileFilter, FileTypes\n\n"
-            "Compliant: EnableFileFilter = True on the Default policy or "
-            "a policy that applies to all users."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-MalwareFilterPolicy -Identity Default | "
+            "Select-Object EnableFileFilter\n\n"
+            "Verify EnableFileFilter is True."
         ),
         remediation=(
             "Microsoft Defender portal → Email & Collaboration > Policies & Rules > "
@@ -61,6 +61,7 @@ class CIS_2_1_2(MS365Rule):
         default_value="Common Attachment Types Filter is disabled by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/anti-malware-policies-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-malwarefilterpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -76,4 +77,20 @@ class CIS_2_1_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "malware_filter_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the malware filter policy: "
+                f"{data.errors.get('malware_filter_policy')}"
+            )
+
+        # Malware filter policy configuration cannot be read via Microsoft
+        # Graph; only Get-MalwareFilterPolicy via Exchange Online Remote
+        # PowerShell exposes EnableFileFilter.
+        return self._manual(
+            message=(
+                "The Common Attachment Types Filter setting cannot be read via "
+                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+                "Get-MalwareFilterPolicy -Identity Default | "
+                "Select-Object EnableFileFilter (should be True)."
+            )
+        )

@@ -3,6 +3,14 @@ CIS MS365 5.1.6.1 (L2) – Ensure that collaboration invitations are sent to
 allowed domains only (Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
+
+Per the official CIS audit procedure, this control is about the legacy B2B
+invitation allow/block domain list (GET /beta/legacy/policies, type
+'B2BManagementPolicy', definition -> B2BManagementPolicy.
+InvitationsAllowedAndBlockedDomainsPolicy) — NOT the cross-tenant access
+policy or authorizationPolicy.allowInvitesFrom, which govern different
+settings (who can invite guests at all, and cross-tenant trust) and don't
+verify domain allow/block lists.
 """
 
 from __future__ import annotations
@@ -46,11 +54,17 @@ class CIS_5_1_6_1(MS365Rule):
         ),
         audit_procedure=(
             "Using Microsoft Graph:\n"
-            "  GET /policies/crossTenantAccessPolicy/default\n"
-            "  Check inboundTrust and b2bCollaborationInbound settings.\n\n"
-            "Also check:\n"
-            "  GET /policies/authorizationPolicy\n"
-            "  Check allowInvitesFrom"
+            "  GET /beta/legacy/policies\n"
+            "  Filter for type == 'B2BManagementPolicy'; parse the JSON-encoded "
+            "'definition' field for "
+            "B2BManagementPolicy.InvitationsAllowedAndBlockedDomainsPolicy.\n"
+            "  Compliant: an AllowedDomains property is present (empty, or "
+            "listing only approved domains) AND no BlockedDomains property is "
+            "present.\n"
+            "  Non-compliant: a BlockedDomains property is present.\n\n"
+            "Microsoft Entra admin center → Identity > External Identities > "
+            "External collaboration settings → 'Allow invitations only to the "
+            "specified domains' with approved Target domains."
         ),
         remediation=(
             "Microsoft Entra admin center → Identity > External identities > "
@@ -76,46 +90,49 @@ class CIS_5_1_6_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        cross_tenant_policy = data.get("cross_tenant_access_policy")
-        if cross_tenant_policy is None:
+        if "b2b_invitation_domains_policy" in (data.errors or {}):
             return self._skip(
-                "Could not retrieve cross-tenant access policy. "
-                "Requires Policy.Read.All permission."
+                "Could not retrieve the B2B invitation domains policy: "
+                f"{data.errors.get('b2b_invitation_domains_policy')}"
             )
 
-        # Check if there's any restriction on inbound B2B collaboration
-        b2b_collab = cross_tenant_policy.get("b2bCollaborationInbound") or {}
-        users_and_groups = b2b_collab.get("usersAndGroups") or {}
-        access_type = users_and_groups.get("accessType")
+        domains_policy = data.get("b2b_invitation_domains_policy")
+        if domains_policy is None:
+            # CIS's own audit script does not declare a verdict when no
+            # B2BManagementPolicy object exists ("No policy found.") —
+            # matching that, we require manual review rather than guessing.
+            return self._manual(
+                message=(
+                    "No B2B invitation allow/block domain list policy is "
+                    "configured for this tenant. Verify manually in Microsoft "
+                    "Entra admin center > External Identities > External "
+                    "collaboration settings."
+                )
+            )
 
         evidence = [
             Evidence(
-                source="graph/policies/crossTenantAccessPolicy/default",
-                data={"b2bCollaborationInbound": b2b_collab},
-                description="Cross-tenant access policy B2B collaboration settings.",
+                source="graph/beta/legacy/policies (B2BManagementPolicy)",
+                data=domains_policy,
+                description="B2B invitation allowed/blocked domains policy.",
             )
         ]
 
-        if access_type == "blocked":
-            return self._pass(
-                "B2B collaboration from external tenants is blocked by the cross-tenant policy.",
+        if "BlockedDomains" in domains_policy:
+            return self._fail(
+                "A BlockedDomains list is configured, which CIS considers "
+                "non-compliant regardless of contents.",
                 evidence=evidence,
             )
-
-        # Check authorization policy for allowInvitesFrom
-        auth_policy = data.get("authorization_policy")
-        if auth_policy and isinstance(auth_policy, dict):
-            allow_invites = auth_policy.get("allowInvitesFrom")
-            if allow_invites in ("adminsAndGuestInviters", "admins", "none"):
-                return self._pass(
-                    f"External invitations are restricted (allowInvitesFrom = {allow_invites}).",
-                    evidence=[
-                        Evidence(
-                            source="graph/policies/authorizationPolicy",
-                            data={"allowInvitesFrom": allow_invites},
-                            description="Authorization policy invitation restriction.",
-                        )
-                    ],
-                )
-
-        return self._manual()
+        if "AllowedDomains" in domains_policy:
+            return self._pass(
+                "Collaboration invitations are restricted via an "
+                "AllowedDomains policy.",
+                evidence=evidence,
+            )
+        return self._manual(
+            message=(
+                "B2B invitation domains policy exists but has neither "
+                "AllowedDomains nor BlockedDomains defined; verify manually."
+            )
+        )

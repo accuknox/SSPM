@@ -171,6 +171,7 @@ the one-time setup below.
    | `SharePointTenantSettings.Read.All` | Read SharePoint tenant-level sharing settings |
    | `AccessReview.Read.All` | Read Identity Governance access review definitions |
    | `RoleManagementPolicy.Read.Directory` | Read PIM role management policies |
+   | `OrgSettings-Forms.Read.All` | Graph permission to the app registration |
 
 3. Click **Add permissions** after selecting all of the above.
 4. Click **Grant admin consent for \<your tenant\>**, then confirm.  

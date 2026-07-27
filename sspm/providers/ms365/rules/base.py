@@ -11,6 +11,8 @@ Provides convenience helpers so concrete rules stay concise:
 
 from __future__ import annotations
 
+from typing import Any
+
 from sspm.core.models import Evidence, Finding, FindingStatus
 from sspm.providers.base import BaseRule, CollectedData
 
@@ -110,3 +112,48 @@ class MS365Rule(BaseRule):
             if role_id in priv_role_ids:
                 members.update(member_ids)
         return members
+
+    # ------------------------------------------------------------------
+    # Microsoft Fabric tenant settings (Get-CISFabricTenantSettings shape)
+    # ------------------------------------------------------------------
+
+    def _get_fabric_setting(
+        self, data: CollectedData, setting_name: str
+    ) -> dict | None:
+        """Return the Fabric tenant setting dict matching ``settingName``, or
+        None if Fabric settings were not collected or the setting is absent.
+
+        Shape (Fabric Admin REST API, GET /v1/admin/tenantsettings):
+            {"tenantSettings": [
+                {"settingName": ..., "enabled": bool,
+                 "enabledSecurityGroups": [...], "properties": [...]},
+                ...
+            ]}
+        """
+        settings = data.get("fabric_tenant_settings")
+        if not settings:
+            return None
+        items = (
+            settings.get("tenantSettings")
+            if isinstance(settings, dict)
+            else settings
+        )
+        for item in items or []:
+            if item.get("settingName") == setting_name:
+                return item
+        return None
+
+    def _fabric_property(self, setting: dict, name: str, default: Any = None) -> Any:
+        """Look up a nested Fabric setting property by name (a list of
+        {"name": ..., "value": ...} entries under "properties")."""
+        for prop in setting.get("properties", []) or []:
+            if prop.get("name") == name:
+                return prop.get("value")
+        return default
+
+    def _fabric_restricted_or_disabled(self, setting: dict) -> bool:
+        """Common CIS Fabric pass condition: the setting is disabled, or
+        enabled but scoped to specific security groups (not the whole org)."""
+        if not setting.get("enabled"):
+            return True
+        return bool(setting.get("enabledSecurityGroups"))

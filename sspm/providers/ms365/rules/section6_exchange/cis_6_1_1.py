@@ -1,6 +1,6 @@
 """
 CIS MS365 6.1.1 (L1) – Ensure 'AuditDisabled' organizationally is set to
-'False' (Manual)
+'False' (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -26,7 +26,7 @@ class CIS_6_1_1(MS365Rule):
         title="Ensure 'AuditDisabled' organizationally is set to 'False'",
         section="6.1 Audit",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -41,10 +41,10 @@ class CIS_6_1_1(MS365Rule):
         ),
         impact="Minimal - enables audit logging which is generally desirable.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
+            "Exchange Online PowerShell:\n"
             "  Connect-ExchangeOnline\n"
-            "  Get-OrganizationConfig | Select-Object AuditDisabled\n\n"
-            "Compliant: AuditDisabled = False"
+            "  Get-OrganizationConfig | Format-List AuditDisabled\n\n"
+            "Compliant: AuditDisabled is False."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -68,4 +68,19 @@ class CIS_6_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-OrganizationConfig has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.  If collection
+        # errored, surface the error; otherwise always return MANUAL.
+        if "organization_config" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange organization configuration: "
+                f"{data.errors.get('organization_config')}"
+            )
+
+        return self._manual(
+            message=(
+                "AuditDisabled cannot be read via Microsoft Graph. Verify manually "
+                "via Exchange Online PowerShell: Get-OrganizationConfig | "
+                "Format-List AuditDisabled - must be False."
+            )
+        )
