@@ -90,16 +90,73 @@ class CIS_6_2_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Transport rules have no Graph API equivalent.  If collection errored,
-        # surface the error; otherwise always return MANUAL.
-        if "transport_rules" in (data.errors or {}):
+        # Neither Get-HostedOutboundSpamFilterPolicy nor Get-TransportRule
+        # have a Microsoft Graph equivalent; both are only reachable via
+        # Exchange Online Remote PowerShell.
+        if "hosted_outbound_spam_filter_policy" in (data.errors or {}):
             return self._skip(
-                "Could not retrieve Exchange transport rules: "
-                f"{data.errors.get('transport_rules')}"
+                "Could not retrieve the hosted outbound spam filter policy: "
+                f"{data.errors.get('hosted_outbound_spam_filter_policy')}"
             )
 
-        # data.get("transport_rules") returns None because the collector
-        # deliberately returns None for this key (no Graph endpoint exists).
-        return self._manual(
-            message="Exchange transport rules cannot be read via Microsoft Graph."
+        spam_policy = data.get("hosted_outbound_spam_filter_policy")
+        if spam_policy is None:
+            return self._manual(
+                "Mail-forwarding controls require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-HostedOutboundSpamFilterPolicy | "
+                "Select-Object AutoForwardingMode (must be 'Off'), and "
+                "Get-TransportRule | Where-Object {$_.RedirectMessageTo -ne "
+                "$null -or $_.BlindCopyTo -ne $null} (should return nothing)."
+            )
+
+        auto_forwarding_mode = spam_policy.get("AutoForwardingMode")
+        evidence = [
+            Evidence(
+                source="Get-HostedOutboundSpamFilterPolicy",
+                data={"AutoForwardingMode": auto_forwarding_mode},
+                description="Outbound spam filter policy automatic forwarding mode.",
+            )
+        ]
+
+        # Transport rules are collected separately; fold them into the same
+        # verdict when available, but don't block the primary check on them.
+        forwarding_rules = []
+        if "transport_rules" not in (data.errors or {}):
+            rules = data.get("transport_rules")
+            if rules is not None:
+                forwarding_rules = [
+                    r for r in rules
+                    if r.get("RedirectMessageTo") or r.get("BlindCopyTo")
+                ]
+                evidence.append(
+                    Evidence(
+                        source="Get-TransportRule",
+                        data=forwarding_rules,
+                        description="Transport rules that redirect or BCC mail.",
+                    )
+                )
+
+        problems = []
+        if auto_forwarding_mode != "Off":
+            problems.append(
+                f"AutoForwardingMode is '{auto_forwarding_mode}' (must be 'Off')"
+            )
+        if forwarding_rules:
+            names = ", ".join(r.get("Name", "") for r in forwarding_rules)
+            problems.append(
+                f"transport rule(s) redirect or BCC mail: {names}"
+            )
+
+        if problems:
+            return self._fail(
+                "Mail forwarding is not fully blocked: " + "; ".join(problems),
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "AutoForwardingMode is 'Off' and no transport rule redirects or "
+            "BCCs mail.",
+            evidence=evidence,
         )

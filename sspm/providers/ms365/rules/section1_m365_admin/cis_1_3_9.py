@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -94,16 +95,61 @@ class CIS_1_3_9(MS365Rule):
                 f"{data.errors.get('owa_mailbox_policy')}"
             )
 
-        # data.get("owa_mailbox_policy") returns None because the collector
-        # deliberately returns None for this key (no Graph endpoint exists;
-        # only Get-OwaMailboxPolicy via Exchange Online Remote PowerShell can
-        # read BookingsMailboxCreationEnabled).
-        return self._manual(
-            message=(
-                "Shared Bookings restriction cannot be read via Microsoft Graph. "
-                "Verify via Exchange Online PowerShell: "
-                "Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default | "
-                "fl BookingsMailboxCreationEnabled (should be False), or "
-                "Get-OrganizationConfig | fl BookingsEnabled (should be False)."
+        owa_policy = data.get("owa_mailbox_policy")
+        if owa_policy is None:
+            return self._manual(
+                "Shared Bookings restriction requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. "
+                "Verify manually: Get-OwaMailboxPolicy -Identity "
+                "OwaMailboxPolicy-Default | fl BookingsMailboxCreationEnabled "
+                "(should be False), or Get-OrganizationConfig | fl "
+                "BookingsEnabled (should be False)."
             )
+
+        org_config = data.get("organization_config")
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default",
+                data={
+                    "BookingsMailboxCreationEnabled": owa_policy.get(
+                        "BookingsMailboxCreationEnabled"
+                    )
+                },
+                description="OWA mailbox default policy.",
+            )
+        ]
+
+        bookings_mailbox_creation_enabled = owa_policy.get(
+            "BookingsMailboxCreationEnabled"
+        )
+        if bookings_mailbox_creation_enabled is False:
+            return self._pass(
+                "BookingsMailboxCreationEnabled is False on "
+                "OwaMailboxPolicy-Default.",
+                evidence=evidence,
+            )
+
+        # Also compliant if Bookings is disabled entirely at the org level,
+        # per the audit procedure's alternate compliant state.
+        if org_config is not None and org_config.get("BookingsEnabled") is False:
+            evidence.append(
+                Evidence(
+                    source="Exchange Online PowerShell: Get-OrganizationConfig",
+                    data={"BookingsEnabled": org_config.get("BookingsEnabled")},
+                    description="Organization configuration.",
+                )
+            )
+            return self._pass(
+                "Bookings is disabled at the organization level "
+                "(BookingsEnabled=False), which is also compliant even "
+                "though BookingsMailboxCreationEnabled is not False.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "BookingsMailboxCreationEnabled is "
+            f"{bookings_mailbox_creation_enabled!r} on OwaMailboxPolicy-Default, "
+            "and Bookings is not disabled at the organization level.",
+            evidence=evidence,
         )

@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -78,6 +79,8 @@ class CIS_2_1_11(MS365Rule):
         tags=["defender", "anti-malware", "attachment-filter", "email-security"],
     )
 
+    _MIN_FILE_TYPES = 120
+
     async def check(self, data: CollectedData):
         if "malware_filter_policy" in (data.errors or {}):
             return self._skip(
@@ -85,18 +88,53 @@ class CIS_2_1_11(MS365Rule):
                 f"{data.errors.get('malware_filter_policy')}"
             )
 
-        # Malware filter policy/rule configuration cannot be read via
-        # Microsoft Graph; only Get-MalwareFilterPolicy and
-        # Get-MalwareFilterRule via Exchange Online Remote PowerShell expose
-        # the file type list, EnableFileFilter, and rule State.
-        return self._manual(
-            message=(
-                "Comprehensive attachment filtering cannot be verified via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-MalwareFilterPolicy | Select-Object EnableFileFilter, "
-                "FileTypes and Get-MalwareFilterRule | Select-Object State "
-                "(the policy must define at least 120 of CIS's 184 reference "
-                "file extensions, EnableFileFilter=True, and the rule "
+        policies = data.get("malware_filter_policy")
+        if policies is None:
+            return self._manual(
+                "Comprehensive attachment filtering requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-MalwareFilterPolicy | "
+                "Select-Object EnableFileFilter, FileTypes and "
+                "Get-MalwareFilterRule | Select-Object State (the policy "
+                "must define at least 120 of CIS's 184 reference file "
+                "extensions, EnableFileFilter=True, and the rule "
                 "State=Enabled)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-MalwareFilterPolicy",
+                data=policies,
+                description="Malware filter policies.",
+            )
+        ]
+
+        # NOTE: Get-MalwareFilterRule (rule State=Enabled) is not collected
+        # by the PowerShell bridge, so we cannot verify the corresponding
+        # rule's enabled state here. We check what is available:
+        # EnableFileFilter and the size of the FileTypes list.
+        compliant = [
+            p
+            for p in policies
+            if p.get("EnableFileFilter") is True
+            and len(p.get("FileTypes") or []) >= self._MIN_FILE_TYPES
+        ]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"Found policy(ies) with comprehensive file filtering: "
+                f"{names} (EnableFileFilter=True and >= "
+                f"{self._MIN_FILE_TYPES} file types defined). NOTE: the "
+                "corresponding rule's State=Enabled was not verified "
+                "(Get-MalwareFilterRule data is not collected) — confirm "
+                "the rule is enabled and applies to all recipients.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No malware filter policy defines at least "
+            f"{self._MIN_FILE_TYPES} file extensions with EnableFileFilter="
+            f"True (checked {len(policies)} policy(ies)).",
+            evidence=evidence,
         )

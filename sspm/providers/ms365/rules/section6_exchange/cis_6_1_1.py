@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -69,18 +70,41 @@ class CIS_6_1_1(MS365Rule):
 
     async def check(self, data: CollectedData):
         # Get-OrganizationConfig has no Microsoft Graph equivalent; it is only
-        # reachable via Exchange Online Remote PowerShell.  If collection
-        # errored, surface the error; otherwise always return MANUAL.
+        # reachable via Exchange Online Remote PowerShell.
         if "organization_config" in (data.errors or {}):
             return self._skip(
                 "Could not retrieve Exchange organization configuration: "
                 f"{data.errors.get('organization_config')}"
             )
 
-        return self._manual(
-            message=(
-                "AuditDisabled cannot be read via Microsoft Graph. Verify manually "
-                "via Exchange Online PowerShell: Get-OrganizationConfig | "
-                "Format-List AuditDisabled - must be False."
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._manual(
+                "AuditDisabled requires the Exchange Online PowerShell bridge "
+                "(Connect-ExchangeOnline with certificate app-only auth), which "
+                "is not configured for this scan. Verify manually: "
+                "Get-OrganizationConfig | Format-List AuditDisabled - must be "
+                "False."
             )
+
+        audit_disabled = org_config.get("AuditDisabled")
+        evidence = [
+            Evidence(
+                source="Get-OrganizationConfig",
+                data={"AuditDisabled": audit_disabled},
+                description="Organization-level mailbox audit configuration.",
+            )
+        ]
+
+        if audit_disabled:
+            return self._fail(
+                "AuditDisabled is True organizationally, so mailbox audit "
+                "logging is disabled by default.",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "AuditDisabled is False organizationally; mailbox auditing is "
+            "enabled by default.",
+            evidence=evidence,
         )

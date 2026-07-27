@@ -1,0 +1,16 @@
+.git
+.github
+.pytest_cache
+.ruff_cache
+.sspmenv
+.env
+__pycache__
+*.pyc
+tests
+docs
+readmes
+ms.txt
+*.html
+*.sarif.json
+Dockerfile
+.dockerignore

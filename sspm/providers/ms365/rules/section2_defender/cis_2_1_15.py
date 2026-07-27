@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -82,6 +83,10 @@ class CIS_2_1_15(MS365Rule):
         tags=["defender", "anti-spam", "outbound", "rate-limit", "email-security"],
     )
 
+    _MAX_EXTERNAL_PER_HOUR = 500
+    _MAX_INTERNAL_PER_HOUR = 1000
+    _MAX_PER_DAY = 1000
+
     async def check(self, data: CollectedData):
         if "hosted_outbound_spam_filter_policy" in (data.errors or {}):
             return self._skip(
@@ -89,19 +94,73 @@ class CIS_2_1_15(MS365Rule):
                 f"{data.errors.get('hosted_outbound_spam_filter_policy')}"
             )
 
-        # Hosted outbound spam filter policy configuration cannot be read via
-        # Microsoft Graph; only Get-HostedOutboundSpamFilterPolicy via
-        # Exchange Online Remote PowerShell exposes the recipient rate limit
-        # fields and ActionWhenThresholdReached.
-        return self._manual(
-            message=(
-                "Outbound anti-spam recipient limits cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+        policy = data.get("hosted_outbound_spam_filter_policy")
+        if policy is None:
+            return self._manual(
+                "Outbound anti-spam recipient limits require the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: "
                 "Get-HostedOutboundSpamFilterPolicy -Identity Default | fl "
-                "RecipientLimitExternalPerHour, RecipientLimitInternalPerHour, "
-                "RecipientLimitPerDay, ActionWhenThresholdReached (recommended: "
-                "External<=500, Internal<=1000, Daily<=1000, "
+                "RecipientLimitExternalPerHour, "
+                "RecipientLimitInternalPerHour, RecipientLimitPerDay, "
+                "ActionWhenThresholdReached (recommended: External<=500, "
+                "Internal<=1000, Daily<=1000, "
                 "ActionWhenThresholdReached=BlockUser, and "
                 "NotifyOutboundSpamRecipients configured)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedOutboundSpamFilterPolicy",
+                data=policy,
+                description="Hosted outbound spam filter policy (Default).",
+            )
+        ]
+
+        external = policy.get("RecipientLimitExternalPerHour")
+        internal = policy.get("RecipientLimitInternalPerHour")
+        daily = policy.get("RecipientLimitPerDay")
+        action = policy.get("ActionWhenThresholdReached")
+
+        limits_ok = (
+            isinstance(external, (int, float))
+            and 0 < external <= self._MAX_EXTERNAL_PER_HOUR
+            and isinstance(internal, (int, float))
+            and 0 < internal <= self._MAX_INTERNAL_PER_HOUR
+            and isinstance(daily, (int, float))
+            and 0 < daily <= self._MAX_PER_DAY
+            and action == "BlockUser"
+        )
+
+        if not limits_ok:
+            return self._fail(
+                "Outbound anti-spam recipient rate limits are not "
+                f"sufficiently restrictive: RecipientLimitExternalPerHour="
+                f"{external!r} (max {self._MAX_EXTERNAL_PER_HOUR}), "
+                f"RecipientLimitInternalPerHour={internal!r} (max "
+                f"{self._MAX_INTERNAL_PER_HOUR}), RecipientLimitPerDay="
+                f"{daily!r} (max {self._MAX_PER_DAY}), "
+                f"ActionWhenThresholdReached={action!r} (must be "
+                "BlockUser).",
+                evidence=evidence,
+            )
+
+        notify_recipients = policy.get("NotifyOutboundSpamRecipients")
+        note = ""
+        if not notify_recipients:
+            note = (
+                " NOTE: NotifyOutboundSpamRecipients is not configured — "
+                "the audit procedure also recommends a monitored mailbox "
+                "here, though this does not affect the rate-limit "
+                "compliance verdict."
+            )
+
+        return self._pass(
+            "Outbound anti-spam recipient rate limits are compliant "
+            f"(External={external}<= {self._MAX_EXTERNAL_PER_HOUR}, "
+            f"Internal={internal}<= {self._MAX_INTERNAL_PER_HOUR}, "
+            f"Daily={daily}<= {self._MAX_PER_DAY}, "
+            f"ActionWhenThresholdReached={action}).{note}",
+            evidence=evidence,
         )

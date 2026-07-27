@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -76,12 +77,51 @@ class CIS_8_5_3(MS365Rule):
                 f"{data.errors.get('teams_meeting_policy')}"
             )
 
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Lobby bypass settings require the Microsoft Teams PowerShell "
+                    "bridge (Connect-MicrosoftTeams with certificate app-only "
+                    "auth), which is not configured for this scan. Verify "
+                    "manually: Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                    "AutoAdmittedUsers — ensure it is InvitedUsers or a more "
+                    "restrictive value (EveryoneInCompanyExcludingGuests, "
+                    "OrganizerOnly)."
+                )
+            )
+
+        value = policy.get("AutoAdmittedUsers")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AutoAdmittedUsers": value},
+                description="Who can bypass the meeting lobby.",
+            )
+        ]
+
+        # Per CIS's audit procedure, compliant values are InvitedUsers or a
+        # more restrictive value.
+        compliant_values = {
+            "InvitedUsers",
+            "EveryoneInCompanyExcludingGuests",
+            "OrganizerOnly",
+        }
+        if value in compliant_values:
+            return self._pass(
+                f"AutoAdmittedUsers is {value!r}, which restricts lobby bypass "
+                "to organization members or more restrictive.",
+                evidence=evidence,
+            )
+        if value is not None:
+            return self._fail(
+                f"AutoAdmittedUsers is {value!r}, which allows more than "
+                "InvitedUsers/organization members to bypass the lobby.",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Lobby bypass settings cannot be read via Microsoft Graph. Verify "
-                "manually via Microsoft Teams PowerShell: Get-CsTeamsMeetingPolicy "
-                "-Identity Global | fl AutoAdmittedUsers — ensure it is InvitedUsers "
-                "or more restrictive (EveryoneInCompanyExcludingGuests, "
-                "OrganizerOnly)."
+                "AutoAdmittedUsers is missing/unexpected; verify manually via "
+                "Get-CsTeamsMeetingPolicy -Identity Global | fl AutoAdmittedUsers."
             )
         )

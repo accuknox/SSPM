@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -87,10 +88,33 @@ class CIS_6_5_5(MS365Rule):
                 f"{data.errors.get('organization_config')}"
             )
 
-        return self._manual(
-            message=(
-                "RejectDirectSend cannot be read via Microsoft Graph. Verify "
-                "manually via Exchange Online PowerShell: Get-OrganizationConfig "
-                "| fl RejectDirectSend - must be True."
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._manual(
+                "RejectDirectSend requires the Exchange Online PowerShell "
+                "bridge (Connect-ExchangeOnline with certificate app-only "
+                "auth), which is not configured for this scan. Verify "
+                "manually: Get-OrganizationConfig | fl RejectDirectSend - "
+                "must be True."
             )
+
+        reject_direct_send = org_config.get("RejectDirectSend")
+        evidence = [
+            Evidence(
+                source="Get-OrganizationConfig",
+                data={"RejectDirectSend": reject_direct_send},
+                description="Organization-level Direct Send rejection setting.",
+            )
+        ]
+
+        if not reject_direct_send:
+            return self._fail(
+                "RejectDirectSend is not True; unauthenticated Direct Send "
+                "submissions are still accepted.",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "RejectDirectSend is True.",
+            evidence=evidence,
         )

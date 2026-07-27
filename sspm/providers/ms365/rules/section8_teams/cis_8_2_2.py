@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -84,14 +85,58 @@ class CIS_8_2_2(MS365Rule):
                 f"{errors.get('teams_external_access_policy') or errors.get('teams_tenant_federation_configuration')}"
             )
 
+        ext_policy = data.get("teams_external_access_policy")
+        fed_config = data.get("teams_tenant_federation_configuration")
+
+        if ext_policy is None and fed_config is None:
+            return self._manual(
+                message=(
+                    "Unmanaged (consumer) Teams communication settings require "
+                    "the Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured for "
+                    "this scan. Verify manually: Get-CsExternalAccessPolicy "
+                    "-Identity Global — ensure EnableTeamsConsumerAccess is False, "
+                    "OR (org-level setting takes precedence, also passing) "
+                    "Get-CsTenantFederationConfiguration | fl AllowTeamsConsumer — "
+                    "ensure it is False."
+                )
+            )
+
+        ext_value = ext_policy.get("EnableTeamsConsumerAccess") if ext_policy else None
+        fed_value = fed_config.get("AllowTeamsConsumer") if fed_config else None
+
+        evidence = [
+            Evidence(
+                source=(
+                    "teams/Get-CsExternalAccessPolicy + "
+                    "Get-CsTenantFederationConfiguration"
+                ),
+                data={
+                    "EnableTeamsConsumerAccess": ext_value,
+                    "AllowTeamsConsumer": fed_value,
+                },
+                description="Communication with unmanaged (consumer) Teams accounts.",
+            )
+        ]
+
+        if ext_value is False or fed_value is False:
+            return self._pass(
+                "Communication with unmanaged (consumer) Teams users is "
+                "disabled.",
+                evidence=evidence,
+            )
+        if ext_value is True or fed_value is True:
+            return self._fail(
+                "Communication with unmanaged (consumer) Teams users is enabled "
+                f"(EnableTeamsConsumerAccess={ext_value!r}, "
+                f"AllowTeamsConsumer={fed_value!r}).",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Unmanaged (consumer) Teams communication settings cannot be read "
-                "via Microsoft Graph. Verify manually via Microsoft Teams "
-                "PowerShell: Connect-MicrosoftTeams; Get-CsExternalAccessPolicy "
-                "-Identity Global — ensure EnableTeamsConsumerAccess is False, OR "
-                "(org-level setting takes precedence, also passing) "
-                "Get-CsTenantFederationConfiguration | fl AllowTeamsConsumer — "
-                "ensure it is False."
+                "Could not determine unmanaged Teams communication status from "
+                "the available data. Verify manually: Get-CsExternalAccessPolicy "
+                "-Identity Global | fl EnableTeamsConsumerAccess, OR "
+                "Get-CsTenantFederationConfiguration | fl AllowTeamsConsumer."
             )
         )

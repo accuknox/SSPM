@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -77,13 +78,50 @@ class CIS_8_5_5(MS365Rule):
                 f"{data.errors.get('teams_meeting_policy')}"
             )
 
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Whether anonymous users can use meeting chat requires the "
+                    "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured "
+                    "for this scan. Verify manually: Get-CsTeamsMeetingPolicy "
+                    "-Identity Global | fl MeetingChatEnabledType — ensure it is "
+                    "EnabledExceptAnonymous or a more restrictive value "
+                    "(EnabledInMeetingOnlyForAllExceptAnonymous, Disabled)."
+                )
+            )
+
+        value = policy.get("MeetingChatEnabledType")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"MeetingChatEnabledType": value},
+                description="Meeting chat availability for anonymous users.",
+            )
+        ]
+
+        compliant_values = {
+            "EnabledExceptAnonymous",
+            "EnabledInMeetingOnlyForAllExceptAnonymous",
+            "Disabled",
+        }
+        if value in compliant_values:
+            return self._pass(
+                f"MeetingChatEnabledType is {value!r}, which prevents anonymous "
+                "users from using meeting chat.",
+                evidence=evidence,
+            )
+        if value is not None:
+            return self._fail(
+                f"MeetingChatEnabledType is {value!r}, which allows anonymous "
+                "users to use meeting chat.",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Whether anonymous users can use meeting chat cannot be read via "
-                "Microsoft Graph. Verify manually via Microsoft Teams PowerShell: "
-                "Get-CsTeamsMeetingPolicy -Identity Global | fl "
-                "MeetingChatEnabledType — ensure it is EnabledExceptAnonymous or "
-                "more restrictive (EnabledInMeetingOnlyForAllExceptAnonymous, "
-                "Disabled)."
+                "MeetingChatEnabledType is missing/unexpected; verify manually "
+                "via Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                "MeetingChatEnabledType."
             )
         )

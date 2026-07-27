@@ -19,6 +19,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -95,15 +96,40 @@ class CIS_3_1_1(MS365Rule):
                 "Could not retrieve Exchange admin audit log configuration: "
                 f"{data.errors.get('admin_audit_log_config')}"
             )
-        # Get-AdminAuditLogConfig has no Microsoft Graph equivalent; it is
-        # only reachable via Exchange Online / Security & Compliance Remote
-        # PowerShell. Sign-in log query accessibility (a Graph signal) does
-        # not verify UnifiedAuditLogIngestionEnabled specifically.
-        return self._manual(
-            message=(
-                "UnifiedAuditLogIngestionEnabled cannot be read via Microsoft "
-                "Graph. Verify manually via Exchange Online PowerShell: "
-                "Get-AdminAuditLogConfig | Select-Object "
-                "UnifiedAuditLogIngestionEnabled — must be True."
+
+        config = data.get("admin_audit_log_config")
+        if config is None:
+            return self._manual(
+                "UnifiedAuditLogIngestionEnabled requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-AdminAuditLogConfig | "
+                "Select-Object UnifiedAuditLogIngestionEnabled — must be "
+                "True."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-AdminAuditLogConfig",
+                data={
+                    "UnifiedAuditLogIngestionEnabled": config.get(
+                        "UnifiedAuditLogIngestionEnabled"
+                    )
+                },
+                description="Admin audit log configuration.",
+            )
+        ]
+
+        if config.get("UnifiedAuditLogIngestionEnabled") is True:
+            return self._pass(
+                "The Microsoft 365 unified audit log is enabled "
+                "(UnifiedAuditLogIngestionEnabled=True).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "The Microsoft 365 unified audit log is not enabled "
+            "(UnifiedAuditLogIngestionEnabled="
+            f"{config.get('UnifiedAuditLogIngestionEnabled')!r}).",
+            evidence=evidence,
         )

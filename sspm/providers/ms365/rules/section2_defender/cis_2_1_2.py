@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -83,14 +84,35 @@ class CIS_2_1_2(MS365Rule):
                 f"{data.errors.get('malware_filter_policy')}"
             )
 
-        # Malware filter policy configuration cannot be read via Microsoft
-        # Graph; only Get-MalwareFilterPolicy via Exchange Online Remote
-        # PowerShell exposes EnableFileFilter.
-        return self._manual(
-            message=(
-                "The Common Attachment Types Filter setting cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-MalwareFilterPolicy -Identity Default | "
-                "Select-Object EnableFileFilter (should be True)."
+        policies = data.get("malware_filter_policy")
+        if policies is None:
+            return self._manual(
+                "The Common Attachment Types Filter setting requires the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-MalwareFilterPolicy "
+                "-Identity Default | Select-Object EnableFileFilter (should "
+                "be True)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-MalwareFilterPolicy",
+                data=policies,
+                description="Malware filter policies.",
+            )
+        ]
+
+        compliant = [p for p in policies if p.get("EnableFileFilter") is True]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"The Common Attachment Types Filter is enabled on: {names}.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "The Common Attachment Types Filter (EnableFileFilter) is not "
+            f"enabled on any of the {len(policies)} malware filter policy(ies).",
+            evidence=evidence,
         )

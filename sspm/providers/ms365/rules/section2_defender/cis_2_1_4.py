@@ -10,6 +10,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -87,15 +88,51 @@ class CIS_2_1_4(MS365Rule):
                 f"{data.errors.get('safe_attachments_policies')}"
             )
 
-        # Safe Attachments policy configuration cannot be read via Microsoft
-        # Graph; only Get-SafeAttachmentPolicy via Exchange Online Remote
-        # PowerShell exposes Enable, Action, and QuarantineTag.
-        return self._manual(
-            message=(
-                "Safe Attachments policy configuration cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-SafeAttachmentPolicy | ft Identity, Enable, Action, "
-                "QuarantineTag (the highest-priority policy should have "
-                "Enable=True, Action=Block, QuarantineTag=AdminOnlyAccessPolicy)."
+        policies = data.get("safe_attachments_policies")
+        if policies is None:
+            return self._manual(
+                "Safe Attachments policy configuration requires the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-SafeAttachmentPolicy | "
+                "ft Identity, Enable, Action, QuarantineTag (the "
+                "highest-priority policy should have Enable=True, "
+                "Action=Block, QuarantineTag=AdminOnlyAccessPolicy)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-SafeAttachmentPolicy",
+                data=policies,
+                description="Safe Attachments policies.",
+            )
+        ]
+
+        # NOTE: Get-SafeAttachmentPolicy itself doesn't expose rule priority
+        # (that lives on Get-SafeAttachmentRule, which is not collected), so
+        # we cannot determine which policy is "highest priority" here. We
+        # instead check whether ANY policy meets the compliant configuration.
+        compliant = [
+            p
+            for p in policies
+            if p.get("Enable") is True
+            and p.get("Action") == "Block"
+            and p.get("QuarantineTag") == "AdminOnlyAccessPolicy"
+        ]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"Found compliant Safe Attachments policy(ies): {names} "
+                "(Enable=True, Action=Block, "
+                "QuarantineTag=AdminOnlyAccessPolicy). Rule priority/scope "
+                "was not verified (Get-SafeAttachmentRule data is not "
+                "collected) — confirm it applies to all recipients.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No Safe Attachments policy has Enable=True, Action=Block, and "
+            f"QuarantineTag=AdminOnlyAccessPolicy (checked {len(policies)} "
+            "policy(ies)).",
+            evidence=evidence,
         )

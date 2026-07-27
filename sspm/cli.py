@@ -382,6 +382,50 @@ def scan_azure(
 @click.option("--no-html", is_flag=True, default=False, help="Skip HTML report generation.")
 @click.option("--no-sarif", is_flag=True, default=False, help="Skip SARIF report generation.")
 @click.option("--verbose", "-v", is_flag=True, help="Show individual findings in the terminal.")
+@click.option(
+    "--ms365-cert-path", default=None, envvar="SSPM_MS365_CERT_PATH",
+    help="Path to a .pfx certificate for the PowerShell bridge. Only required for the "
+         "SharePoint module; Exchange and Teams authenticate with --client-secret alone "
+         "(access-token app-only auth) when this is omitted.",
+)
+@click.option(
+    "--ms365-cert-password", default="", envvar="SSPM_MS365_CERT_PASSWORD",
+    help="Certificate password (passed to child processes via env only, never argv/logs).",
+)
+@click.option(
+    "--ms365-pwsh-app-id", default=None, envvar="SSPM_MS365_PWSH_APP_ID",
+    help="App registration client ID for the PowerShell bridge (defaults to --client-id).",
+)
+@click.option(
+    "--ms365-sharepoint-admin-url", default=None, envvar="SSPM_MS365_SHAREPOINT_ADMIN_URL",
+    help="SharePoint admin center URL (defaults to https://<tenant-domain-prefix>-admin.sharepoint.com).",
+)
+@click.option(
+    "--ms365-no-powershell-bridge", is_flag=True, default=False, envvar="SSPM_MS365_NO_POWERSHELL_BRIDGE",
+    help="Disable the PowerShell bridge entirely (Exchange/Teams/SharePoint checks stay MANUAL). "
+         "By default the bridge is attempted automatically using --client-secret; this reverts "
+         "to the old Graph-only behavior.",
+)
+@click.option(
+    "--ms365-no-exchange-bridge", is_flag=True, default=False, envvar="SSPM_MS365_NO_EXCHANGE_BRIDGE",
+    help="Disable the Exchange Online PowerShell bridge even if credentials are configured.",
+)
+@click.option(
+    "--ms365-no-teams-bridge", is_flag=True, default=False, envvar="SSPM_MS365_NO_TEAMS_BRIDGE",
+    help="Disable the Microsoft Teams PowerShell bridge even if credentials are configured.",
+)
+@click.option(
+    "--ms365-no-sharepoint-bridge", is_flag=True, default=False, envvar="SSPM_MS365_NO_SHAREPOINT_BRIDGE",
+    help="Disable the SharePoint Online PowerShell bridge even if a cert is configured.",
+)
+@click.option(
+    "--ms365-pwsh-path", default="pwsh", envvar="SSPM_MS365_PWSH_PATH", show_default=True,
+    help="Path to the PowerShell 7 executable.",
+)
+@click.option(
+    "--ms365-pwsh-timeout", default=180, envvar="SSPM_MS365_PWSH_TIMEOUT", show_default=True,
+    help="Timeout in seconds for each PowerShell bridge script.",
+)
 def scan_ms365(
     tenant_id: str,
     client_id: str,
@@ -393,6 +437,16 @@ def scan_ms365(
     no_html: bool,
     no_sarif: bool,
     verbose: bool,
+    ms365_cert_path: str | None,
+    ms365_cert_password: str,
+    ms365_pwsh_app_id: str | None,
+    ms365_sharepoint_admin_url: str | None,
+    ms365_no_powershell_bridge: bool,
+    ms365_no_exchange_bridge: bool,
+    ms365_no_teams_bridge: bool,
+    ms365_no_sharepoint_bridge: bool,
+    ms365_pwsh_path: str,
+    ms365_pwsh_timeout: int,
 ) -> None:
     """Scan a Microsoft 365 tenant against CIS Foundations Benchmark v6.0.1."""
     import logging
@@ -404,11 +458,37 @@ def scan_ms365(
     from sspm.core.reporter import write_sarif
     from sspm.providers.ms365.provider import MS365Provider
 
+    resolved_tenant_domain = tenant_domain or tenant_id
+
+    ps_bridge = None
+    ps_config = None
+    if not ms365_no_powershell_bridge:
+        from sspm.providers.ms365.powershell_bridge import PowerShellBridge, PowerShellConfig
+
+        default_admin_url = (
+            f"https://{resolved_tenant_domain.split('.')[0]}-admin.sharepoint.com"
+        )
+        ps_bridge = PowerShellBridge(pwsh_path=ms365_pwsh_path, timeout=ms365_pwsh_timeout)
+        ps_config = PowerShellConfig(
+            app_id=ms365_pwsh_app_id or client_id,
+            tenant_id=tenant_id,
+            cert_path=ms365_cert_path or "",
+            cert_password=ms365_cert_password,
+            client_secret=client_secret,
+            organization=resolved_tenant_domain,
+            sharepoint_admin_url=ms365_sharepoint_admin_url or default_admin_url,
+            enable_exchange=not ms365_no_exchange_bridge,
+            enable_teams=not ms365_no_teams_bridge,
+            enable_sharepoint=not ms365_no_sharepoint_bridge,
+        )
+
     provider = MS365Provider(
         tenant_id=tenant_id,
         client_id=client_id,
         client_secret=client_secret,
-        tenant_domain=tenant_domain or tenant_id,
+        tenant_domain=resolved_tenant_domain,
+        ps_bridge=ps_bridge,
+        ps_config=ps_config,
     )
 
     engine = ScanEngine(

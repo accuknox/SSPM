@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -76,11 +77,41 @@ class CIS_8_1_2(MS365Rule):
                 f"{data.errors.get('teams_client_configuration')}"
             )
 
+        config = data.get("teams_client_configuration")
+        if config is None:
+            return self._manual(
+                message=(
+                    "Channel email integration requires the Microsoft Teams "
+                    "PowerShell bridge (Connect-MicrosoftTeams with certificate "
+                    "app-only auth), which is not configured for this scan. "
+                    "Verify manually: Get-CsTeamsClientConfiguration -Identity "
+                    "Global | fl AllowEmailIntoChannel — ensure it is False."
+                )
+            )
+
+        value = config.get("AllowEmailIntoChannel")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsClientConfiguration",
+                data={"AllowEmailIntoChannel": value},
+                description="Whether users can email a Teams channel address.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowEmailIntoChannel is False.", evidence=evidence
+            )
+        if value is True:
+            return self._fail(
+                "AllowEmailIntoChannel is True; users can send emails to a "
+                "channel email address.",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Channel email integration cannot be read via Microsoft Graph. "
-                "Verify manually via Microsoft Teams PowerShell: "
-                "Connect-MicrosoftTeams; Get-CsTeamsClientConfiguration -Identity "
-                "Global | fl AllowEmailIntoChannel — ensure it is False."
+                f"AllowEmailIntoChannel has an unexpected value ({value!r}); "
+                "verify manually via Get-CsTeamsClientConfiguration -Identity "
+                "Global | fl AllowEmailIntoChannel."
             )
         )

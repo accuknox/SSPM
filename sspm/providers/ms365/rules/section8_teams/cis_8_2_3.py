@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -84,14 +85,61 @@ class CIS_8_2_3(MS365Rule):
                 f"{errors.get('teams_external_access_policy') or errors.get('teams_tenant_federation_configuration')}"
             )
 
+        ext_policy = data.get("teams_external_access_policy")
+        fed_config = data.get("teams_tenant_federation_configuration")
+
+        if ext_policy is None and fed_config is None:
+            return self._manual(
+                message=(
+                    "Whether external Teams users can initiate conversations "
+                    "requires the Microsoft Teams PowerShell bridge "
+                    "(Connect-MicrosoftTeams with certificate app-only auth), "
+                    "which is not configured for this scan. Verify manually: "
+                    "Get-CsExternalAccessPolicy -Identity Global — ensure "
+                    "EnableTeamsConsumerInbound is False, OR (org-level setting "
+                    "takes precedence, also passing) "
+                    "Get-CsTenantFederationConfiguration | fl "
+                    "AllowTeamsConsumerInbound — ensure it is False."
+                )
+            )
+
+        ext_value = ext_policy.get("EnableTeamsConsumerInbound") if ext_policy else None
+        fed_value = fed_config.get("AllowTeamsConsumerInbound") if fed_config else None
+
+        evidence = [
+            Evidence(
+                source=(
+                    "teams/Get-CsExternalAccessPolicy + "
+                    "Get-CsTenantFederationConfiguration"
+                ),
+                data={
+                    "EnableTeamsConsumerInbound": ext_value,
+                    "AllowTeamsConsumerInbound": fed_value,
+                },
+                description="Whether external (consumer) Teams users can initiate conversations.",
+            )
+        ]
+
+        if ext_value is False or fed_value is False:
+            return self._pass(
+                "External Teams users cannot initiate conversations with "
+                "internal users.",
+                evidence=evidence,
+            )
+        if ext_value is True or fed_value is True:
+            return self._fail(
+                "External Teams users can initiate conversations with internal "
+                f"users (EnableTeamsConsumerInbound={ext_value!r}, "
+                f"AllowTeamsConsumerInbound={fed_value!r}).",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Whether external Teams users can initiate conversations cannot be "
-                "read via Microsoft Graph. Verify manually via Microsoft Teams "
-                "PowerShell: Connect-MicrosoftTeams; Get-CsExternalAccessPolicy "
-                "-Identity Global — ensure EnableTeamsConsumerInbound is False, OR "
-                "(org-level setting takes precedence, also passing) "
-                "Get-CsTenantFederationConfiguration | fl AllowTeamsConsumerInbound "
-                "— ensure it is False."
+                "Could not determine whether external Teams users can initiate "
+                "conversations from the available data. Verify manually: "
+                "Get-CsExternalAccessPolicy -Identity Global | fl "
+                "EnableTeamsConsumerInbound, OR "
+                "Get-CsTenantFederationConfiguration | fl "
+                "AllowTeamsConsumerInbound."
             )
         )

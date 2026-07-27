@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -83,13 +84,55 @@ class CIS_1_3_3(MS365Rule):
                 "Could not retrieve Exchange sharing policy: "
                 f"{data.errors.get('sharing_policy')}"
             )
-        # Get-SharingPolicy has no Microsoft Graph equivalent; it is only
-        # reachable via Exchange Online Remote PowerShell.
-        return self._manual(
-            message=(
-                "Calendar external sharing cannot be read via Microsoft Graph. "
-                "Verify manually via Exchange Online PowerShell: "
-                "Get-SharingPolicy -Identity 'Default Sharing Policy' | ft "
-                "Name,Enabled — Enabled must be False."
+
+        policy = data.get("sharing_policy")
+        if policy is None:
+            return self._manual(
+                "Calendar external sharing requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. "
+                "Verify manually: Get-SharingPolicy -Identity 'Default "
+                "Sharing Policy' | Select Name, Domains, Enabled — Enabled "
+                "must be False, or Domains must not grant full calendar "
+                "detail sharing to anonymous/external domains."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-SharingPolicy",
+                data=policy,
+                description="Default Sharing Policy.",
+            )
+        ]
+
+        if not policy.get("Enabled"):
+            return self._pass(
+                "The Default Sharing Policy is disabled (Enabled=False).",
+                evidence=evidence,
+            )
+
+        # Domains is a list of "Domain:Permission" strings, e.g.
+        # "Anonymous:CalendarSharingFreeBusySimple" (free/busy only — safe)
+        # vs "Anonymous:CalendarSharingFreeBusyDetail" or a bare
+        # "CalendarSharing" permission (full calendar details — unsafe).
+        domains = policy.get("Domains") or []
+        unsafe_entries = [
+            d
+            for d in domains
+            if "CalendarSharing" in d and "FreeBusySimple" not in d
+        ]
+
+        if unsafe_entries:
+            return self._fail(
+                "The Default Sharing Policy is enabled and grants full "
+                "calendar detail sharing (not just free/busy) to: "
+                + ", ".join(unsafe_entries),
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "The Default Sharing Policy is enabled but does not grant full "
+            "calendar detail sharing to any external/anonymous domain "
+            "(only free/busy sharing, if any, is permitted).",
+            evidence=evidence,
         )

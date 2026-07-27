@@ -1180,10 +1180,23 @@ class TestCIS_5_2_3_6:
         assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
-    async def test_manual_when_state_default(self, rule):
+    async def test_fail_when_state_default(self, rule):
+        # "default" means "Microsoft managed" / never explicitly configured —
+        # CIS requires state to literally be 'enabled', so this doesn't
+        # satisfy the control.
         data = _collected(
             authentication_methods_policy={
                 "systemCredentialPreferences": {"state": "default"}
+            }
+        )
+        finding = await rule.check(data)
+        assert finding.status == FindingStatus.FAIL
+
+    @pytest.mark.asyncio
+    async def test_manual_when_state_unrecognized(self, rule):
+        data = _collected(
+            authentication_methods_policy={
+                "systemCredentialPreferences": {"state": "somethingElse"}
             }
         )
         finding = await rule.check(data)

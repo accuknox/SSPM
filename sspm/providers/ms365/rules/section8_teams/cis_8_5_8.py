@@ -10,6 +10,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -76,11 +77,42 @@ class CIS_8_5_8(MS365Rule):
                 f"{data.errors.get('teams_meeting_policy')}"
             )
 
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Whether external (non-trusted) meeting chat is enabled "
+                    "requires the Microsoft Teams PowerShell bridge "
+                    "(Connect-MicrosoftTeams with certificate app-only auth), "
+                    "which is not configured for this scan. Verify manually: "
+                    "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                    "AllowExternalNonTrustedMeetingChat — ensure it is False."
+                )
+            )
+
+        value = policy.get("AllowExternalNonTrustedMeetingChat")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowExternalNonTrustedMeetingChat": value},
+                description="Whether external (non-trusted) participants can use meeting chat.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowExternalNonTrustedMeetingChat is False.", evidence=evidence
+            )
+        if value is True:
+            return self._fail(
+                "AllowExternalNonTrustedMeetingChat is True; external "
+                "participants can use meeting chat.",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Whether external (non-trusted) meeting chat is enabled cannot be "
-                "read via Microsoft Graph. Verify manually via Microsoft Teams "
-                "PowerShell: Get-CsTeamsMeetingPolicy -Identity Global | fl "
-                "AllowExternalNonTrustedMeetingChat — ensure it is False."
+                "AllowExternalNonTrustedMeetingChat has an unexpected value "
+                f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
+                "-Identity Global | fl AllowExternalNonTrustedMeetingChat."
             )
         )

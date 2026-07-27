@@ -7,10 +7,13 @@ Profile Applicability: E5 Level 1
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -94,6 +97,27 @@ class CIS_2_1_7(MS365Rule):
         tags=["defender", "anti-phishing", "email-security", "e5"],
     )
 
+    _REQUIRED: ClassVar[dict] = {
+        "Enabled": True,
+        "PhishThresholdLevel": 3,
+        "EnableTargetedUserProtection": True,
+        "EnableOrganizationDomainsProtection": True,
+        "EnableMailboxIntelligence": True,
+        "EnableMailboxIntelligenceProtection": True,
+        "EnableSpoofIntelligence": True,
+        "TargetedUserProtectionAction": "Quarantine",
+        "TargetedDomainProtectionAction": "Quarantine",
+        "MailboxIntelligenceProtectionAction": "Quarantine",
+        "EnableFirstContactSafetyTips": True,
+        "EnableSimilarUsersSafetyTips": True,
+        "EnableSimilarDomainsSafetyTips": True,
+        "EnableUnusualCharactersSafetyTips": True,
+        "HonorDmarcPolicy": True,
+    }
+
+    def _is_compliant(self, policy: dict) -> bool:
+        return all(policy.get(k) == v for k, v in self._REQUIRED.items())
+
     async def check(self, data: CollectedData):
         if "anti_phishing_policies" in (data.errors or {}):
             return self._skip(
@@ -101,18 +125,42 @@ class CIS_2_1_7(MS365Rule):
                 f"{data.errors.get('anti_phishing_policies')}"
             )
 
-        # Anti-phishing policy configuration cannot be read via Microsoft
-        # Graph; only Get-AntiPhishPolicy / Get-AntiPhishRule via Exchange
-        # Online Remote PowerShell expose these settings.
-        return self._manual(
-            message=(
-                "Anti-phishing policy configuration cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-AntiPhishPolicy | fl Enabled, PhishThresholdLevel, "
-                "EnableTargetedUserProtection, "
+        policies = data.get("anti_phishing_policies")
+        if policies is None:
+            return self._manual(
+                "Anti-phishing policy configuration requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-AntiPhishPolicy | fl "
+                "Enabled, PhishThresholdLevel, EnableTargetedUserProtection, "
                 "EnableOrganizationDomainsProtection, "
-                "EnableMailboxIntelligence, EnableMailboxIntelligenceProtection, "
-                "EnableSpoofIntelligence, HonorDmarcPolicy, and Get-AntiPhishRule "
-                "to confirm a custom policy is applied to all recipients."
+                "EnableMailboxIntelligence, "
+                "EnableMailboxIntelligenceProtection, "
+                "EnableSpoofIntelligence, HonorDmarcPolicy, and "
+                "Get-AntiPhishRule to confirm a custom policy is applied to "
+                "all recipients."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-AntiPhishPolicy",
+                data=policies,
+                description="Anti-phishing policies.",
+            )
+        ]
+
+        compliant = [p for p in policies if self._is_compliant(p)]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"Found a compliant anti-phishing policy: {names}. Rule "
+                "scope/priority (Get-AntiPhishRule) was not verified — "
+                "confirm it applies to all recipients.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No anti-phishing policy has all required protections enabled "
+            f"(checked {len(policies)} policy(ies)).",
+            evidence=evidence,
         )

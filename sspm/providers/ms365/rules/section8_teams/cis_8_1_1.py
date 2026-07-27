@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -80,13 +81,58 @@ class CIS_8_1_1(MS365Rule):
                 f"{data.errors.get('teams_client_configuration')}"
             )
 
+        config = data.get("teams_client_configuration")
+        if config is None:
+            return self._manual(
+                message=(
+                    "Approved cloud storage providers for Teams file sharing "
+                    "requires the Microsoft Teams PowerShell bridge "
+                    "(Connect-MicrosoftTeams with certificate app-only auth), "
+                    "which is not configured for this scan. Verify manually: "
+                    "Get-CsTeamsClientConfiguration -Identity Global | fl "
+                    "AllowDropbox, AllowBox, AllowGoogleDrive, AllowShareFile, "
+                    "AllowEgnyte — ensure only organizationally-approved providers "
+                    "are True."
+                )
+            )
+
+        providers = {
+            "AllowDropbox": config.get("AllowDropbox"),
+            "AllowBox": config.get("AllowBox"),
+            "AllowGoogleDrive": config.get("AllowGoogleDrive"),
+            "AllowShareFile": config.get("AllowShareFile"),
+            "AllowEgnyte": config.get("AllowEgnyte"),
+        }
+        enabled = [name for name, value in providers.items() if value is True]
+
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsClientConfiguration",
+                data=providers,
+                description=(
+                    "Third-party cloud storage providers allowed for Teams file "
+                    "sharing."
+                ),
+            )
+        ]
+
+        if not enabled:
+            return self._pass(
+                "No third-party cloud storage providers (Dropbox, Box, Google "
+                "Drive, ShareFile, Egnyte) are enabled for Teams file sharing.",
+                evidence=evidence,
+            )
+
+        # CIS's own audit procedure only requires that "organizationally
+        # approved" providers be True — which providers are approved is a
+        # business decision this data cannot answer, so a non-empty enabled
+        # set is left for manual review rather than an automatic FAIL that
+        # could wrongly flag a legitimately-approved provider.
         return self._manual(
             message=(
-                "Approved cloud storage providers for Teams file sharing cannot be "
-                "read via Microsoft Graph. Verify manually via Microsoft Teams "
-                "PowerShell: Connect-MicrosoftTeams; "
-                "Get-CsTeamsClientConfiguration -Identity Global | fl AllowDropbox, "
-                "AllowBox, AllowGoogleDrive, AllowShareFile, AllowEgnyte — ensure only "
-                "organizationally-approved providers are True."
+                "The following third-party storage providers are enabled for "
+                f"Teams file sharing: {', '.join(enabled)}. Verify each is "
+                "organizationally-approved; disable any that are not via "
+                "Set-CsTeamsClientConfiguration -Identity Global."
             )
         )

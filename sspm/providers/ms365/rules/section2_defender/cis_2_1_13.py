@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -78,14 +79,34 @@ class CIS_2_1_13(MS365Rule):
                 f"{data.errors.get('hosted_connection_filter_policy')}"
             )
 
-        # Hosted connection filter policy configuration cannot be read via
-        # Microsoft Graph; only Get-HostedConnectionFilterPolicy via Exchange
-        # Online Remote PowerShell exposes EnableSafeList.
-        return self._manual(
-            message=(
-                "The connection filter safe list setting cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-HostedConnectionFilterPolicy -Identity Default | "
-                "fl EnableSafeList (should be False)."
+        policy = data.get("hosted_connection_filter_policy")
+        if policy is None:
+            return self._manual(
+                "The connection filter safe list setting requires the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: "
+                "Get-HostedConnectionFilterPolicy -Identity Default | fl "
+                "EnableSafeList (should be False)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedConnectionFilterPolicy",
+                data={"EnableSafeList": policy.get("EnableSafeList")},
+                description="Hosted connection filter policy (Default).",
+            )
+        ]
+
+        if policy.get("EnableSafeList") is False:
+            return self._pass(
+                "The connection filter safe list is disabled "
+                "(EnableSafeList=False).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "The connection filter safe list is enabled "
+            f"(EnableSafeList={policy.get('EnableSafeList')!r}).",
+            evidence=evidence,
         )

@@ -10,10 +10,13 @@ in email messages and Office documents.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -97,6 +100,21 @@ class CIS_2_1_1(MS365Rule):
         tags=["defender", "safe-links", "anti-phishing", "email-security"],
     )
 
+    _REQUIRED: ClassVar[dict] = {
+        "EnableSafeLinksForEmail": True,
+        "EnableSafeLinksForTeams": True,
+        "EnableSafeLinksForOffice": True,
+        "TrackClicks": True,
+        "AllowClickThrough": False,
+        "ScanUrls": True,
+        "EnableForInternalSenders": True,
+        "DeliverMessageAfterScan": True,
+        "DisableUrlRewrite": False,
+    }
+
+    def _is_compliant(self, policy: dict) -> bool:
+        return all(policy.get(k) == v for k, v in self._REQUIRED.items())
+
     async def check(self, data: CollectedData):
         if "safe_links_policies" in (data.errors or {}):
             return self._skip(
@@ -104,17 +122,44 @@ class CIS_2_1_1(MS365Rule):
                 f"{data.errors.get('safe_links_policies')}"
             )
 
-        # Safe Links policy configuration cannot be read via Microsoft Graph;
-        # only Get-SafeLinksPolicy via Exchange Online Remote PowerShell exposes
-        # these settings.
-        return self._manual(
-            message=(
-                "Safe Links policy configuration cannot be read via Microsoft "
-                "Graph. Verify via Exchange Online PowerShell: "
-                "Get-SafeLinksPolicy | Select-Object Identity, "
-                "EnableSafeLinksForEmail, EnableSafeLinksForTeams, "
-                "EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, "
-                "ScanUrls, EnableForInternalSenders, DeliverMessageAfterScan, "
+        policies = data.get("safe_links_policies")
+        if policies is None:
+            return self._manual(
+                "Safe Links policy configuration requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-SafeLinksPolicy | "
+                "Select-Object Identity, EnableSafeLinksForEmail, "
+                "EnableSafeLinksForTeams, EnableSafeLinksForOffice, "
+                "TrackClicks, AllowClickThrough, ScanUrls, "
+                "EnableForInternalSenders, DeliverMessageAfterScan, "
                 "DisableUrlRewrite."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-SafeLinksPolicy",
+                data=policies,
+                description="Safe Links policies.",
+            )
+        ]
+
+        compliant = [p for p in policies if self._is_compliant(p)]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"At least one Safe Links policy ({names}) has all required "
+                "settings enabled (EnableSafeLinksForEmail, "
+                "EnableSafeLinksForTeams, EnableSafeLinksForOffice, "
+                "TrackClicks, ScanUrls, EnableForInternalSenders, "
+                "DeliverMessageAfterScan = True; AllowClickThrough, "
+                "DisableUrlRewrite = False).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No Safe Links policy has all required settings enabled. "
+            f"Found {len(policies)} policy(ies), none matching the "
+            "compliant configuration.",
+            evidence=evidence,
         )

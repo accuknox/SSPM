@@ -19,6 +19,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -89,13 +90,33 @@ class CIS_1_3_6(MS365Rule):
                 "Could not retrieve Exchange organization configuration: "
                 f"{data.errors.get('organization_config')}"
             )
-        # Get-OrganizationConfig has no Microsoft Graph equivalent; it is only
-        # reachable via Exchange Online Remote PowerShell.
-        return self._manual(
-            message=(
-                "CustomerLockBoxEnabled cannot be read via Microsoft Graph. "
-                "Verify manually via Exchange Online PowerShell: "
-                "Get-OrganizationConfig | Select-Object CustomerLockBoxEnabled "
-                "— must be True."
+
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._manual(
+                "CustomerLockBoxEnabled requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. "
+                "Verify manually: Get-OrganizationConfig | Select-Object "
+                "CustomerLockBoxEnabled — must be True."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-OrganizationConfig",
+                data={"CustomerLockBoxEnabled": org_config.get("CustomerLockBoxEnabled")},
+                description="Organization configuration.",
+            )
+        ]
+
+        if org_config.get("CustomerLockBoxEnabled") is True:
+            return self._pass(
+                "Customer Lockbox is enabled (CustomerLockBoxEnabled=True).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "Customer Lockbox is not enabled "
+            f"(CustomerLockBoxEnabled={org_config.get('CustomerLockBoxEnabled')!r}).",
+            evidence=evidence,
         )

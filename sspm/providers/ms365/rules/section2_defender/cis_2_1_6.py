@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -86,16 +87,39 @@ class CIS_2_1_6(MS365Rule):
                 f"{data.errors.get('hosted_outbound_spam_filter_policy')}"
             )
 
-        # Hosted outbound spam filter policy configuration cannot be read via
-        # Microsoft Graph; only Get-HostedOutboundSpamFilterPolicy via
-        # Exchange Online Remote PowerShell exposes BccSuspiciousOutboundMail
-        # and NotifyOutboundSpam.
-        return self._manual(
-            message=(
-                "Outbound spam admin notification settings cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-HostedOutboundSpamFilterPolicy | Select-Object Bcc*, Notify* "
-                "(expect BccSuspiciousOutboundMail=True and "
+        policy = data.get("hosted_outbound_spam_filter_policy")
+        if policy is None:
+            return self._manual(
+                "Outbound spam admin notification settings require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: "
+                "Get-HostedOutboundSpamFilterPolicy | Select-Object Bcc*, "
+                "Notify* (expect BccSuspiciousOutboundMail=True and "
                 "NotifyOutboundSpam=True with correct email addresses)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedOutboundSpamFilterPolicy",
+                data=policy,
+                description="Hosted outbound spam filter policy (Default).",
+            )
+        ]
+
+        if (
+            policy.get("BccSuspiciousOutboundMail") is True
+            and policy.get("NotifyOutboundSpam") is True
+        ):
+            return self._pass(
+                "Admin notifications for outbound spam are enabled "
+                "(BccSuspiciousOutboundMail=True, NotifyOutboundSpam=True).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "Admin notifications for outbound spam are not fully enabled: "
+            f"BccSuspiciousOutboundMail={policy.get('BccSuspiciousOutboundMail')!r}, "
+            f"NotifyOutboundSpam={policy.get('NotifyOutboundSpam')!r}.",
+            evidence=evidence,
         )

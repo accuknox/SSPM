@@ -80,38 +80,53 @@ class CIS_8_5_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Teams meeting policy data requires Teams PowerShell or Graph beta.
-        # Flag as manual if not available.
-        meeting_policies = data.get("teams_meeting_policies")
-        if not meeting_policies:
-            return self._manual()
-
-        global_policy = next(
-            (p for p in meeting_policies if p.get("identity") == "Global"), None
-        )
-        if not global_policy:
-            return self._skip("Global Teams meeting policy not found in collected data.")
-
-        allows_anon = global_policy.get("allowAnonymousUsersToJoinMeeting", True)
-        if not allows_anon:
-            return self._pass(
-                "Anonymous users are blocked from joining Teams meetings.",
-                evidence=[
-                    Evidence(
-                        source="graph/teams/meetingPolicies",
-                        data={"allowAnonymousUsersToJoinMeeting": False},
-                        description="Global Teams meeting policy.",
-                    )
-                ],
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
             )
 
-        return self._fail(
-            "Anonymous users are allowed to join Teams meetings.",
-            evidence=[
-                Evidence(
-                    source="graph/teams/meetingPolicies",
-                    data=global_policy,
-                    description="Global Teams meeting policy allows anonymous join.",
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Whether anonymous users can join meetings requires the "
+                    "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate or access-token app-only auth), which is "
+                    "not configured for this scan. Verify manually: "
+                    "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                    "AllowAnonymousUsersToJoinMeeting — ensure it is False."
                 )
-            ],
+            )
+
+        value = policy.get("AllowAnonymousUsersToJoinMeeting")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowAnonymousUsersToJoinMeeting": value},
+                description="Whether anonymous users can join a meeting.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowAnonymousUsersToJoinMeeting is False; anonymous users "
+                "are blocked from joining Teams meetings.",
+                evidence=evidence,
+            )
+        if value is True:
+            return self._fail(
+                "AllowAnonymousUsersToJoinMeeting is True; anonymous users "
+                "are allowed to join Teams meetings.",
+                evidence=evidence,
+            )
+        return self._manual(
+            message=(
+                f"AllowAnonymousUsersToJoinMeeting has an unexpected value "
+                f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
+                "-Identity Global | fl AllowAnonymousUsersToJoinMeeting."
+            )
         )

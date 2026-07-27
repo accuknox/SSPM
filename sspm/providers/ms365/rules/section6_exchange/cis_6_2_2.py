@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -71,22 +72,49 @@ class CIS_6_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Transport rules have no Graph API equivalent.  If collection
-        # errored, surface the error; otherwise always return MANUAL.
+        # Transport rules have no Graph API equivalent; they are only
+        # reachable via Exchange Online Remote PowerShell.
         if "transport_rules" in (data.errors or {}):
             return self._skip(
                 "Could not retrieve Exchange transport rules: "
                 f"{data.errors.get('transport_rules')}"
             )
 
-        # data.get("transport_rules") returns None because the collector
-        # deliberately returns None for this key (no Graph endpoint exists).
-        return self._manual(
-            message=(
-                "Exchange transport rules cannot be read via Microsoft Graph. "
-                "Verify manually via Exchange Online PowerShell: "
-                "Get-TransportRule | Where-Object { $_.setscl -eq -1 -and "
-                "$_.SenderDomainIs -ne $null } - any rule returned indicates a "
-                "domain-whitelisting rule that bypasses spam filtering."
+        rules = data.get("transport_rules")
+        if rules is None:
+            return self._manual(
+                "Exchange transport rules require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-TransportRule | Where-Object { $_.setscl -eq -1 "
+                "-and $_.SenderDomainIs -ne $null } - any rule returned "
+                "indicates a domain-whitelisting rule that bypasses spam "
+                "filtering."
             )
+
+        whitelist_rules = [
+            r for r in rules
+            if r.get("SetSCL") == -1 and r.get("SenderDomainIs")
+        ]
+
+        evidence = [
+            Evidence(
+                source="Get-TransportRule",
+                data=whitelist_rules,
+                description="Transport rules that set SCL to -1 for a specific sender domain.",
+            )
+        ]
+
+        if whitelist_rules:
+            names = ", ".join(r.get("Name", "") for r in whitelist_rules)
+            return self._fail(
+                f"{len(whitelist_rules)} transport rule(s) whitelist specific "
+                f"sender domains by setting SCL to -1: {names}",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "No transport rule sets SCL to -1 (bypassing spam filtering) for "
+            "a specific sender domain.",
+            evidence=evidence,
         )

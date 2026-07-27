@@ -71,13 +71,43 @@ class CIS_6_5_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Try to get Exchange settings via Graph API
-        org = data.get("organization")
-        if org:
-            # The organization object doesn't directly expose OAuth settings
-            # but we can note this
-            pass
+        # Get-OrganizationConfig has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.
+        if "organization_config" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange organization configuration: "
+                f"{data.errors.get('organization_config')}"
+            )
 
-        # We'll check via a manual approach since the exchange settings
-        # endpoint requires specific permissions
-        return self._manual()
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._manual(
+                "OAuth2ClientProfileEnabled requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "or access-token app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-OrganizationConfig | "
+                "Select-Object OAuth2ClientProfileEnabled - must be True."
+            )
+
+        modern_auth_enabled = org_config.get("OAuth2ClientProfileEnabled")
+        evidence = [
+            Evidence(
+                source="Get-OrganizationConfig",
+                data={"OAuth2ClientProfileEnabled": modern_auth_enabled},
+                description="Whether modern authentication (OAuth 2.0) is enabled for Exchange Online.",
+            )
+        ]
+
+        if modern_auth_enabled:
+            return self._pass(
+                "OAuth2ClientProfileEnabled is True; modern authentication "
+                "for Exchange Online is enabled.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "OAuth2ClientProfileEnabled is False; modern authentication for "
+            "Exchange Online is disabled, allowing Basic Authentication "
+            "which bypasses MFA and Conditional Access.",
+            evidence=evidence,
+        )

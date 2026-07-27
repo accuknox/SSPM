@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -84,16 +85,43 @@ class CIS_2_1_3(MS365Rule):
                 f"{data.errors.get('malware_filter_policy')}"
             )
 
-        # Malware filter policy configuration cannot be read via Microsoft
-        # Graph; only Get-MalwareFilterPolicy via Exchange Online Remote
-        # PowerShell exposes EnableInternalSenderAdminNotifications.
-        return self._manual(
-            message=(
-                "Internal sender malware notification settings cannot be read "
-                "via Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-MalwareFilterPolicy | fl Identity, "
-                "EnableInternalSenderAdminNotifications, "
+        policies = data.get("malware_filter_policy")
+        if policies is None:
+            return self._manual(
+                "Internal sender malware notification settings require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-MalwareFilterPolicy | "
+                "fl Identity, EnableInternalSenderAdminNotifications, "
                 "InternalSenderAdminAddress (should be True and a defined "
                 "address, respectively)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-MalwareFilterPolicy",
+                data=policies,
+                description="Malware filter policies.",
+            )
+        ]
+
+        compliant = [
+            p
+            for p in policies
+            if p.get("EnableInternalSenderAdminNotifications") is True
+            and p.get("InternalSenderAdminAddress")
+        ]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                "Internal sender malware admin notifications are enabled "
+                f"with a configured address on: {names}.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No malware filter policy has both "
+            "EnableInternalSenderAdminNotifications=True and a defined "
+            f"InternalSenderAdminAddress (checked {len(policies)} policy(ies)).",
+            evidence=evidence,
         )

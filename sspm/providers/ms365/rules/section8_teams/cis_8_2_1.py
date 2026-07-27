@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -90,15 +91,84 @@ class CIS_8_2_1(MS365Rule):
                 f"{errors.get('teams_external_access_policy') or errors.get('teams_tenant_federation_configuration')}"
             )
 
+        ext_policy = data.get("teams_external_access_policy")
+        fed_config = data.get("teams_tenant_federation_configuration")
+
+        if ext_policy is None and fed_config is None:
+            return self._manual(
+                message=(
+                    "External domain restrictions require the Microsoft Teams "
+                    "PowerShell bridge (Connect-MicrosoftTeams with certificate "
+                    "app-only auth), which is not configured for this scan. Verify "
+                    "manually: Get-CsExternalAccessPolicy -Identity Global — "
+                    "ensure EnableFederationAccess is False, OR (org-level setting "
+                    "takes precedence, also passing) "
+                    "Get-CsTenantFederationConfiguration | fl AllowFederatedUsers, "
+                    "AllowedDomains — ensure AllowFederatedUsers is False, or True "
+                    "with AllowedDomains restricted to specific authorized domains "
+                    "(not AllowAllKnownDomains)."
+                )
+            )
+
+        evidence = [
+            Evidence(
+                source=(
+                    "teams/Get-CsExternalAccessPolicy + "
+                    "Get-CsTenantFederationConfiguration"
+                ),
+                data={
+                    "teams_external_access_policy": ext_policy,
+                    "teams_tenant_federation_configuration": fed_config,
+                },
+                description="Teams external access / federation domain restriction settings.",
+            )
+        ]
+
+        if ext_policy and ext_policy.get("EnableFederationAccess") is False:
+            return self._pass(
+                "EnableFederationAccess is False on the Global external access "
+                "policy.",
+                evidence=evidence,
+            )
+
+        if fed_config:
+            allow_federated = fed_config.get("AllowFederatedUsers")
+            if allow_federated is False:
+                return self._pass(
+                    "AllowFederatedUsers is False on the tenant federation "
+                    "configuration.",
+                    evidence=evidence,
+                )
+            if allow_federated is True:
+                # AllowedDomains is a complex nested .NET object (either an
+                # "allow all known domains" marker or a specific domain list)
+                # whose exact ConvertTo-Json shape is not reliably known —
+                # deciding PASS/FAIL here would be a guess, so it's left for
+                # manual review rather than risking a wrong verdict.
+                return self._manual(
+                    message=(
+                        "AllowFederatedUsers is True. Whether AllowedDomains is "
+                        "restricted to specific authorized domains (compliant) or "
+                        "set to allow all known domains (non-compliant) requires "
+                        "manual review: Get-CsTenantFederationConfiguration | fl "
+                        "AllowedDomains."
+                    )
+                )
+
+        if ext_policy and ext_policy.get("EnableFederationAccess") is True:
+            return self._fail(
+                "EnableFederationAccess is True and no restricting "
+                "AllowFederatedUsers=False override was found, so external Teams "
+                "domains are not restricted.",
+                evidence=evidence,
+            )
+
         return self._manual(
             message=(
-                "External domain restrictions cannot be read via Microsoft Graph. "
-                "Verify manually via Microsoft Teams PowerShell: "
-                "Connect-MicrosoftTeams; Get-CsExternalAccessPolicy -Identity Global "
-                "— ensure EnableFederationAccess is False, OR (org-level setting "
-                "takes precedence, also passing) Get-CsTenantFederationConfiguration "
-                "| fl AllowFederatedUsers, AllowedDomains — ensure AllowFederatedUsers "
-                "is False, or True with AllowedDomains restricted to specific "
-                "authorized domains (not AllowAllKnownDomains)."
+                "Could not determine external domain restriction status from the "
+                "available data. Verify manually: Get-CsExternalAccessPolicy "
+                "-Identity Global — ensure EnableFederationAccess is False, OR "
+                "Get-CsTenantFederationConfiguration | fl AllowFederatedUsers, "
+                "AllowedDomains."
             )
         )

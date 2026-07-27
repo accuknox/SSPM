@@ -10,6 +10,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -74,11 +75,42 @@ class CIS_8_5_9(MS365Rule):
                 f"{data.errors.get('teams_meeting_policy')}"
             )
 
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Whether cloud recording is off by default requires the "
+                    "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured "
+                    "for this scan. Verify manually: Get-CsTeamsMeetingPolicy "
+                    "-Identity Global | fl AllowCloudRecording — ensure it is "
+                    "False."
+                )
+            )
+
+        value = policy.get("AllowCloudRecording")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowCloudRecording": value},
+                description="Whether meeting cloud recording is allowed.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowCloudRecording is False.", evidence=evidence
+            )
+        if value is True:
+            return self._fail(
+                "AllowCloudRecording is True; meeting recording is enabled by "
+                "default.",
+                evidence=evidence,
+            )
         return self._manual(
             message=(
-                "Whether cloud recording is off by default cannot be read via "
-                "Microsoft Graph. Verify manually via Microsoft Teams PowerShell: "
-                "Get-CsTeamsMeetingPolicy -Identity Global | fl AllowCloudRecording "
-                "— ensure it is False."
+                f"AllowCloudRecording has an unexpected value ({value!r}); "
+                "verify manually via Get-CsTeamsMeetingPolicy -Identity Global "
+                "| fl AllowCloudRecording."
             )
         )

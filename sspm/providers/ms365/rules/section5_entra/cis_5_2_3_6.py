@@ -115,6 +115,19 @@ class CIS_5_2_3_6(MS365Rule):
                 evidence=evidence,
             )
 
+        if state == "default":
+            # "default" means "Microsoft managed" — the tenant admin has never
+            # explicitly turned this on. CIS's audit procedure requires state
+            # to literally be 'enabled', so an unconfigured/Microsoft-managed
+            # state does not satisfy that, regardless of what Microsoft's
+            # current rollout default happens to resolve to internally.
+            return self._fail(
+                "System-preferred MFA state is 'default' (Microsoft managed) — "
+                "it has not been explicitly enabled by the tenant admin, so "
+                "this control is not satisfied.",
+                evidence=evidence,
+            )
+
         return self._manual(
             f"System-preferred MFA state is '{state}'."
         )

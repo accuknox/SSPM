@@ -10,6 +10,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -81,14 +82,59 @@ class CIS_6_5_2(MS365Rule):
                 f"{data.errors.get('organization_config')}"
             )
 
-        return self._manual(
-            message=(
-                "MailTips settings cannot be read via Microsoft Graph. Verify "
-                "manually via Exchange Online PowerShell: Get-OrganizationConfig "
-                "| fl MailTips* - MailTipsAllTipsEnabled, "
-                "MailTipsExternalRecipientsTipsEnabled, and "
-                "MailTipsGroupMetricsEnabled must be True, and "
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._manual(
+                "MailTips settings require the Exchange Online PowerShell "
+                "bridge (Connect-ExchangeOnline with certificate app-only "
+                "auth), which is not configured for this scan. Verify "
+                "manually: Get-OrganizationConfig | fl MailTips* - "
+                "MailTipsAllTipsEnabled, MailTipsExternalRecipientsTipsEnabled, "
+                "and MailTipsGroupMetricsEnabled must be True, and "
                 "MailTipsLargeAudienceThreshold should be set appropriately "
                 "(default 25)."
             )
+
+        all_tips = org_config.get("MailTipsAllTipsEnabled")
+        external_tips = org_config.get("MailTipsExternalRecipientsTipsEnabled")
+        group_metrics = org_config.get("MailTipsGroupMetricsEnabled")
+        threshold = org_config.get("MailTipsLargeAudienceThreshold")
+
+        evidence = [
+            Evidence(
+                source="Get-OrganizationConfig",
+                data={
+                    "MailTipsAllTipsEnabled": all_tips,
+                    "MailTipsExternalRecipientsTipsEnabled": external_tips,
+                    "MailTipsGroupMetricsEnabled": group_metrics,
+                    "MailTipsLargeAudienceThreshold": threshold,
+                },
+                description="Organization-level MailTips settings.",
+            )
+        ]
+
+        problems = []
+        if not all_tips:
+            problems.append("MailTipsAllTipsEnabled is not True")
+        if not external_tips:
+            problems.append("MailTipsExternalRecipientsTipsEnabled is not True")
+        if not group_metrics:
+            problems.append("MailTipsGroupMetricsEnabled is not True")
+        if threshold is None or threshold > 25:
+            problems.append(
+                f"MailTipsLargeAudienceThreshold is {threshold} (should be 25 or less)"
+            )
+
+        if problems:
+            return self._fail(
+                "MailTips are not fully enabled: " + "; ".join(problems),
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "MailTips are enabled: MailTipsAllTipsEnabled, "
+            "MailTipsExternalRecipientsTipsEnabled, and "
+            "MailTipsGroupMetricsEnabled are all True, and "
+            f"MailTipsLargeAudienceThreshold is {threshold}.",
+            evidence=evidence,
         )

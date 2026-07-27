@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -80,14 +81,33 @@ class CIS_2_1_12(MS365Rule):
                 f"{data.errors.get('hosted_connection_filter_policy')}"
             )
 
-        # Hosted connection filter policy configuration cannot be read via
-        # Microsoft Graph; only Get-HostedConnectionFilterPolicy via Exchange
-        # Online Remote PowerShell exposes IPAllowList.
-        return self._manual(
-            message=(
-                "The connection filter IP allow list cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-HostedConnectionFilterPolicy -Identity Default | "
-                "fl IPAllowList (should be empty)."
+        policy = data.get("hosted_connection_filter_policy")
+        if policy is None:
+            return self._manual(
+                "The connection filter IP allow list requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: "
+                "Get-HostedConnectionFilterPolicy -Identity Default | fl "
+                "IPAllowList (should be empty)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedConnectionFilterPolicy",
+                data={"IPAllowList": policy.get("IPAllowList")},
+                description="Hosted connection filter policy (Default).",
+            )
+        ]
+
+        ip_allow_list = policy.get("IPAllowList") or []
+        if not ip_allow_list:
+            return self._pass(
+                "The connection filter IP allow list is empty.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            f"The connection filter IP allow list is not empty: {ip_allow_list}.",
+            evidence=evidence,
         )

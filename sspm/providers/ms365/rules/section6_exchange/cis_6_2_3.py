@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -77,11 +78,52 @@ class CIS_6_2_3(MS365Rule):
                 f"{data.errors.get('external_in_outlook')}"
             )
 
-        return self._manual(
-            message=(
-                "External sender identification settings cannot be read via "
-                "Microsoft Graph. Verify manually via Exchange Online PowerShell: "
-                "Get-ExternalInOutlook - Enabled must be True, and AllowList "
-                "should only contain explicitly permitted addresses."
+        identities = data.get("external_in_outlook")
+        if identities is None:
+            return self._manual(
+                "External sender identification settings require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-ExternalInOutlook - Enabled "
+                "must be True, and AllowList should only contain explicitly "
+                "permitted addresses/domains."
             )
-        )
+
+        if not identities:
+            return self._manual(
+                "Get-ExternalInOutlook returned no identities to evaluate; "
+                "verify manually."
+            )
+
+        evidence = [
+            Evidence(
+                source="Get-ExternalInOutlook",
+                data=identities,
+                description="External sender identification settings per identity.",
+            )
+        ]
+
+        disabled = [
+            i.get("Identity", "") for i in identities if not i.get("Enabled")
+        ]
+        if disabled:
+            return self._fail(
+                "External sender identification is not enabled for: "
+                + ", ".join(disabled),
+                evidence=evidence,
+            )
+
+        allow_lists = {
+            i.get("Identity", ""): i.get("AllowList")
+            for i in identities
+            if i.get("AllowList")
+        }
+        message = "External sender identification (Enabled = True) is configured for all identities."
+        if allow_lists:
+            message += (
+                " Note: one or more identities have an AllowList configured "
+                "- manually confirm it only contains explicitly permitted "
+                f"addresses/domains: {allow_lists}"
+            )
+
+        return self._pass(message, evidence=evidence)

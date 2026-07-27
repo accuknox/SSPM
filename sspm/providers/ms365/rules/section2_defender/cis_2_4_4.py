@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -82,16 +83,38 @@ class CIS_2_4_4(MS365Rule):
                 f"{data.errors.get('teams_protection_policy')}"
             )
 
-        # Teams protection policy configuration cannot be read via Microsoft
-        # Graph; only Get-TeamsProtectionPolicy / Get-TeamsProtectionPolicyRule
-        # via Exchange Online Remote PowerShell expose ZapEnabled and any
-        # exclusions.
-        return self._manual(
-            message=(
-                "Zero-hour auto purge for Microsoft Teams cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-TeamsProtectionPolicy | fl ZapEnabled (should be True) and "
+        policies = data.get("teams_protection_policy")
+        if policies is None:
+            return self._manual(
+                "Zero-hour auto purge for Microsoft Teams requires the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-TeamsProtectionPolicy "
+                "| fl ZapEnabled (should be True) and "
                 "Get-TeamsProtectionPolicyRule | fl ExceptIf* (review any "
                 "exclusions)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-TeamsProtectionPolicy",
+                data=policies,
+                description="Teams protection policies.",
+            )
+        ]
+
+        compliant = [p for p in policies if p.get("ZapEnabled") is True]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"Zero-hour auto purge for Teams is enabled on: {names}. "
+                "Rule-level exclusions (Get-TeamsProtectionPolicyRule "
+                "ExceptIf*) were not verified — this data is not collected.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "Zero-hour auto purge for Teams (ZapEnabled) is not enabled on "
+            f"any of the {len(policies)} Teams protection policy(ies).",
+            evidence=evidence,
         )

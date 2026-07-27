@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -78,11 +79,35 @@ class CIS_6_5_3(MS365Rule):
                 f"{data.errors.get('owa_mailbox_policy')}"
             )
 
-        return self._manual(
-            message=(
-                "The OWA mailbox policy cannot be read via Microsoft Graph. "
-                "Verify manually via Exchange Online PowerShell: "
-                "Get-OwaMailboxPolicy -Identity OwaMailboxPolicy-Default | fl "
+        owa_policy = data.get("owa_mailbox_policy")
+        if owa_policy is None:
+            return self._manual(
+                "The OWA mailbox policy requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-OwaMailboxPolicy -Identity "
+                "OwaMailboxPolicy-Default | fl "
                 "AdditionalStorageProvidersAvailable - must be False."
             )
+
+        available = owa_policy.get("AdditionalStorageProvidersAvailable")
+        evidence = [
+            Evidence(
+                source="Get-OwaMailboxPolicy",
+                data={"AdditionalStorageProvidersAvailable": available},
+                description="OWA mailbox policy additional storage provider setting.",
+            )
+        ]
+
+        if available:
+            return self._fail(
+                "AdditionalStorageProvidersAvailable is True; users can "
+                "connect third-party cloud storage providers in Outlook on "
+                "the web.",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "AdditionalStorageProvidersAvailable is False.",
+            evidence=evidence,
         )

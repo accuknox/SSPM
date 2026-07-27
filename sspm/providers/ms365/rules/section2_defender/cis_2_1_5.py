@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -84,17 +85,43 @@ class CIS_2_1_5(MS365Rule):
                 f"{data.errors.get('atp_policy_for_o365')}"
             )
 
-        # ATP policy for Office 365 configuration cannot be read via Microsoft
-        # Graph; only Get-AtpPolicyForO365 via Exchange Online Remote
-        # PowerShell exposes EnableATPForSPOTeamsODB, EnableSafeDocs, and
-        # AllowSafeDocsOpen.
-        return self._manual(
-            message=(
-                "Safe Attachments for SharePoint/OneDrive/Teams cannot be read "
-                "via Microsoft Graph. Verify via Exchange Online PowerShell: "
-                "Get-AtpPolicyForO365 | fl Name, EnableATPForSPOTeamsODB, "
-                "EnableSafeDocs, AllowSafeDocsOpen (expect "
-                "EnableATPForSPOTeamsODB=True, EnableSafeDocs=True, "
-                "AllowSafeDocsOpen=False)."
+        policy = data.get("atp_policy_for_o365")
+        if policy is None:
+            return self._manual(
+                "Safe Attachments for SharePoint/OneDrive/Teams requires the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-AtpPolicyForO365 | fl "
+                "Name, EnableATPForSPOTeamsODB, EnableSafeDocs, "
+                "AllowSafeDocsOpen (expect EnableATPForSPOTeamsODB=True, "
+                "EnableSafeDocs=True, AllowSafeDocsOpen=False)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-AtpPolicyForO365",
+                data=policy,
+                description="ATP policy for Office 365.",
+            )
+        ]
+
+        if (
+            policy.get("EnableATPForSPOTeamsODB") is True
+            and policy.get("EnableSafeDocs") is True
+            and policy.get("AllowSafeDocsOpen") is False
+        ):
+            return self._pass(
+                "Safe Attachments for SharePoint/OneDrive/Teams is enabled "
+                "(EnableATPForSPOTeamsODB=True, EnableSafeDocs=True, "
+                "AllowSafeDocsOpen=False).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "Safe Attachments for SharePoint/OneDrive/Teams is not fully "
+            "compliant: EnableATPForSPOTeamsODB="
+            f"{policy.get('EnableATPForSPOTeamsODB')!r}, EnableSafeDocs="
+            f"{policy.get('EnableSafeDocs')!r}, AllowSafeDocsOpen="
+            f"{policy.get('AllowSafeDocsOpen')!r}.",
+            evidence=evidence,
         )

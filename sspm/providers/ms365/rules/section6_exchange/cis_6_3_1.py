@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -74,6 +75,11 @@ class CIS_6_3_1(MS365Rule):
         tags=["exchange", "outlook", "add-ins", "app-control"],
     )
 
+    # Add-in installation roles that CIS requires to be absent.
+    _ADD_IN_ROLES = frozenset(
+        {"My Custom Apps", "My Marketplace Apps", "My ReadWriteMailbox Apps"}
+    )
+
     async def check(self, data: CollectedData):
         # Get-RoleAssignmentPolicy has no Microsoft Graph equivalent; it is
         # only reachable via Exchange Online Remote PowerShell.
@@ -83,12 +89,43 @@ class CIS_6_3_1(MS365Rule):
                 f"{data.errors.get('role_assignment_policies')}"
             )
 
-        return self._manual(
-            message=(
-                "Role assignment policies cannot be read via Microsoft Graph. "
-                "Verify manually via Exchange Online PowerShell: "
-                "Get-RoleAssignmentPolicy - ensure 'My Custom Apps', "
-                "'My Marketplace Apps', and 'My ReadWriteMailbox Apps' are not "
-                "present in AssignedRoles for any policy."
+        policies = data.get("role_assignment_policies")
+        if policies is None:
+            return self._manual(
+                "Role assignment policies require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-RoleAssignmentPolicy - ensure 'My Custom "
+                "Apps', 'My Marketplace Apps', and 'My ReadWriteMailbox Apps' "
+                "are not present in AssignedRoles for any policy."
             )
+
+        offending = []
+        for policy in policies or []:
+            assigned = set(policy.get("AssignedRoles") or [])
+            present = assigned & self._ADD_IN_ROLES
+            if present:
+                name = policy.get("Name") or policy.get("Identity", "")
+                offending.append(f"{name}: {', '.join(sorted(present))}")
+
+        evidence = [
+            Evidence(
+                source="Get-RoleAssignmentPolicy",
+                data=policies,
+                description="Role assignment policies and their AssignedRoles.",
+            )
+        ]
+
+        if offending:
+            return self._fail(
+                "One or more role assignment policies allow users to install "
+                "Outlook add-ins: " + " | ".join(offending),
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "No role assignment policy includes 'My Custom Apps', 'My "
+            "Marketplace Apps', or 'My ReadWriteMailbox Apps' in "
+            "AssignedRoles.",
+            evidence=evidence,
         )

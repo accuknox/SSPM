@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -79,15 +80,41 @@ class CIS_2_1_14(MS365Rule):
                 f"{data.errors.get('hosted_content_filter_policy')}"
             )
 
-        # Hosted content filter policy configuration cannot be read via
-        # Microsoft Graph; only Get-HostedContentFilterPolicy via Exchange
-        # Online Remote PowerShell exposes AllowedSenderDomains.
-        return self._manual(
-            message=(
-                "Inbound anti-spam allowed sender domains cannot be read via "
-                "Microsoft Graph. Verify via Exchange Online PowerShell: "
+        policies = data.get("hosted_content_filter_policy")
+        if policies is None:
+            return self._manual(
+                "Inbound anti-spam allowed sender domains require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: "
                 "Get-HostedContentFilterPolicy | ft Identity, "
                 "AllowedSenderDomains (should be undefined/empty for every "
                 "inbound policy)."
             )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedContentFilterPolicy",
+                data=policies,
+                description="Hosted content filter policies.",
+            )
+        ]
+
+        # The audit procedure requires EVERY inbound policy to have no
+        # allowed sender domains (not just at least one) — unlike other
+        # rules in this section, this is an "all" check, not an "any" check.
+        offending = [p for p in policies if p.get("AllowedSenderDomains")]
+        if offending:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in offending)
+            return self._fail(
+                f"AllowedSenderDomains is configured on: {names}. This "
+                "causes all mail from those domains to bypass spam "
+                "filtering.",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            f"AllowedSenderDomains is empty/undefined on all "
+            f"{len(policies)} inbound anti-spam policy(ies).",
+            evidence=evidence,
         )

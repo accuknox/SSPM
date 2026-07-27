@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -77,11 +78,34 @@ class CIS_8_2_4(MS365Rule):
                 f"{data.errors.get('teams_tenant_federation_configuration')}"
             )
 
-        return self._manual(
-            message=(
-                "Communication with trial Teams tenants cannot be read via "
-                "Microsoft Graph. Verify manually via Microsoft Teams PowerShell: "
-                "Connect-MicrosoftTeams; Get-CsTenantFederationConfiguration — "
-                "ensure ExternalAccessWithTrialTenants is set to Blocked."
+        fed_config = data.get("teams_tenant_federation_configuration")
+        if fed_config is None:
+            return self._manual(
+                message=(
+                    "Communication with trial Teams tenants requires the "
+                    "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured "
+                    "for this scan. Verify manually: "
+                    "Get-CsTenantFederationConfiguration — ensure "
+                    "ExternalAccessWithTrialTenants is set to Blocked."
+                )
             )
+
+        value = fed_config.get("ExternalAccessWithTrialTenants")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTenantFederationConfiguration",
+                data={"ExternalAccessWithTrialTenants": value},
+                description="Whether communication with trial Teams tenants is blocked.",
+            )
+        ]
+
+        if value == "Blocked":
+            return self._pass(
+                "ExternalAccessWithTrialTenants is Blocked.", evidence=evidence
+            )
+        return self._fail(
+            f"ExternalAccessWithTrialTenants is {value!r}, not Blocked; "
+            "communication with trial Teams tenants is not fully restricted.",
+            evidence=evidence,
         )

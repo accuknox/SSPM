@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -80,11 +81,37 @@ class CIS_6_1_3(MS365Rule):
                 f"{data.errors.get('mailbox_audit_bypass_association')}"
             )
 
-        return self._manual(
-            message=(
-                "Mailbox audit bypass associations cannot be read via Microsoft "
-                "Graph. Verify manually via Exchange Online PowerShell: "
-                "Get-MailboxAuditBypassAssociation -ResultSize unlimited | where "
-                "AuditBypassEnabled -eq $true - no accounts should be returned."
+        bypass_accounts = data.get("mailbox_audit_bypass_association")
+        if bypass_accounts is None:
+            return self._manual(
+                "Mailbox audit bypass associations require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-MailboxAuditBypassAssociation -ResultSize "
+                "unlimited | where AuditBypassEnabled -eq $true - no accounts "
+                "should be returned."
             )
+
+        # The collector's PowerShell script already filters this list to only
+        # accounts with AuditBypassEnabled = $true (see scripts/exchange.ps1),
+        # so any items present here are non-compliant.
+        if not bypass_accounts:
+            return self._pass(
+                "No mailboxes have AuditBypassEnabled set to True."
+            )
+
+        names = [
+            a.get("Name") or a.get("Identity", "") for a in bypass_accounts
+        ]
+        evidence = [
+            Evidence(
+                source="Get-MailboxAuditBypassAssociation",
+                data=bypass_accounts,
+                description="Accounts with AuditBypassEnabled = True.",
+            )
+        ]
+        return self._fail(
+            f"{len(bypass_accounts)} account(s) have audit bypass enabled: "
+            + ", ".join(names),
+            evidence=evidence,
         )

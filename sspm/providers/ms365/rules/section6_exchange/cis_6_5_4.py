@@ -10,6 +10,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -81,11 +82,34 @@ class CIS_6_5_4(MS365Rule):
                 f"{data.errors.get('transport_config')}"
             )
 
-        return self._manual(
-            message=(
-                "SmtpClientAuthenticationDisabled cannot be read via Microsoft "
-                "Graph. Verify manually via Exchange Online PowerShell: "
-                "Get-TransportConfig | Format-List "
+        transport_config = data.get("transport_config")
+        if transport_config is None:
+            return self._manual(
+                "SmtpClientAuthenticationDisabled requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for this "
+                "scan. Verify manually: Get-TransportConfig | Format-List "
                 "SmtpClientAuthenticationDisabled - must be True."
             )
+
+        disabled = transport_config.get("SmtpClientAuthenticationDisabled")
+        evidence = [
+            Evidence(
+                source="Get-TransportConfig",
+                data={"SmtpClientAuthenticationDisabled": disabled},
+                description="Organization-level SMTP AUTH setting.",
+            )
+        ]
+
+        if not disabled:
+            return self._fail(
+                "SmtpClientAuthenticationDisabled is not True; SMTP AUTH "
+                "(Basic Authentication) is still permitted at the "
+                "organization level.",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "SmtpClientAuthenticationDisabled is True.",
+            evidence=evidence,
         )

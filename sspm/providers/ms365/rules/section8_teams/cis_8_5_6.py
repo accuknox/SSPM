@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -77,12 +78,36 @@ class CIS_8_5_6(MS365Rule):
                 f"{data.errors.get('teams_meeting_policy')}"
             )
 
-        return self._manual(
-            message=(
-                "Presenter role restrictions cannot be read via Microsoft Graph. "
-                "Verify manually via Microsoft Teams PowerShell: "
-                "Get-CsTeamsMeetingPolicy -Identity Global | fl "
-                "DesignatedPresenterRoleMode — ensure it is "
-                "OrganizerOnlyUserOverride."
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._manual(
+                message=(
+                    "Presenter role restrictions require the Microsoft Teams "
+                    "PowerShell bridge (Connect-MicrosoftTeams with certificate "
+                    "app-only auth), which is not configured for this scan. "
+                    "Verify manually: Get-CsTeamsMeetingPolicy -Identity Global | "
+                    "fl DesignatedPresenterRoleMode — ensure it is "
+                    "OrganizerOnlyUserOverride."
+                )
             )
+
+        value = policy.get("DesignatedPresenterRoleMode")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"DesignatedPresenterRoleMode": value},
+                description="Who can be designated as a presenter by default.",
+            )
+        ]
+
+        if value == "OrganizerOnlyUserOverride":
+            return self._pass(
+                "DesignatedPresenterRoleMode is OrganizerOnlyUserOverride.",
+                evidence=evidence,
+            )
+        return self._fail(
+            f"DesignatedPresenterRoleMode is {value!r}, not "
+            "OrganizerOnlyUserOverride; participants other than organizers/"
+            "co-organizers may be able to present by default.",
+            evidence=evidence,
         )
