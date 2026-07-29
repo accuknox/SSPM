@@ -738,8 +738,9 @@ class MS365Collector:
             raise RuntimeError(
                 f"HTTP {resp.status_code} from the Fabric admin API. Enable "
                 "'Service principals can access read-only admin APIs' in the "
-                "Fabric admin portal (Tenant settings > Developer settings) "
-                "and add this app registration to the allowed security group."
+                "Fabric admin portal (Tenant settings > Admin API settings), "
+                "scoped to a security group that contains this app's service "
+                "principal. Changes can take ~15 minutes to apply."
             )
         resp.raise_for_status()
         return resp.json()
