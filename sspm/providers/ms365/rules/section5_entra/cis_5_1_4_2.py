@@ -96,7 +96,10 @@ class CIS_5_1_4_2(MS365Rule):
         # Values: a number > 0 and < high threshold is compliant
         # "Unlimited" might be represented as None, 0, or a very high number
         if user_device_quota is None:
-            return self._manual()
+            return self._skip(
+                "The device registration policy does not report a "
+                "userDeviceQuota value."
+            )
 
         if isinstance(user_device_quota, int) and 0 < user_device_quota <= 50:
             return self._pass(

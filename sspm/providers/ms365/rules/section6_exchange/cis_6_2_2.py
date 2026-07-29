@@ -1,6 +1,6 @@
 """
-CIS MS365 6.2.2 (L1) – Ensure no mail transport rules exist to whitelist any
-domains (Manual)
+CIS MS365 6.2.2 (L1) – Ensure mail transport rules do not whitelist specific
+domains (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_2_2(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.2.2",
-        title="Ensure no mail transport rules exist to whitelist any domains",
-        section="6.2 Mail Transport",
+        title="Ensure mail transport rules do not whitelist specific domains",
+        section="6.2 Mail flow",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -41,10 +42,12 @@ class CIS_6_2_2(MS365Rule):
         ),
         impact="Removing domain whitelist rules means email from those domains will be filtered.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-TransportRule | Where-Object {$_.SetSCL -eq -1} | "
-            "Select-Object Name, Conditions, SetSCL\n\n"
-            "Compliant: No transport rules that set SCL = -1 (bypass spam filtering)."
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-TransportRule | Where-Object { $_.setscl -eq -1 -and "
+            "$_.SenderDomainIs -ne $null } | ft Name,SenderDomainIs,SetSCL\n\n"
+            "Compliant: no rule sets SCL to -1 (bypass spam filtering) for a "
+            "specific sender domain; no output is returned."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -69,4 +72,49 @@ class CIS_6_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Transport rules have no Graph API equivalent; they are only
+        # reachable via Exchange Online Remote PowerShell.
+        if "transport_rules" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange transport rules: "
+                f"{data.errors.get('transport_rules')}"
+            )
+
+        rules = data.get("transport_rules")
+        if rules is None:
+            return self._skip(
+                "Exchange transport rules require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-TransportRule | Where-Object { $_.setscl -eq -1 "
+                "-and $_.SenderDomainIs -ne $null } - any rule returned "
+                "indicates a domain-whitelisting rule that bypasses spam "
+                "filtering."
+            )
+
+        whitelist_rules = [
+            r for r in rules
+            if r.get("SetSCL") == -1 and r.get("SenderDomainIs")
+        ]
+
+        evidence = [
+            Evidence(
+                source="Get-TransportRule",
+                data=whitelist_rules,
+                description="Transport rules that set SCL to -1 for a specific sender domain.",
+            )
+        ]
+
+        if whitelist_rules:
+            names = ", ".join(r.get("Name", "") for r in whitelist_rules)
+            return self._fail(
+                f"{len(whitelist_rules)} transport rule(s) whitelist specific "
+                f"sender domains by setting SCL to -1: {names}",
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "No transport rule sets SCL to -1 (bypassing spam filtering) for "
+            "a specific sender domain.",
+            evidence=evidence,
+        )

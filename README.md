@@ -171,6 +171,7 @@ the one-time setup below.
    | `SharePointTenantSettings.Read.All` | Read SharePoint tenant-level sharing settings |
    | `AccessReview.Read.All` | Read Identity Governance access review definitions |
    | `RoleManagementPolicy.Read.Directory` | Read PIM role management policies |
+   | `OrgSettings-Forms.Read.All` | Graph permission to the app registration |
 
 3. Click **Add permissions** after selecting all of the above.
 4. Click **Grant admin consent for \<your tenant\>**, then confirm.  
@@ -234,9 +235,17 @@ A response containing `"access_token"` confirms the credentials are valid.
 
 ---
 
-> **Note:** Exchange Online and SharePoint Online controls that require
-> PowerShell modules (EXO, PnP, Teams) return `MANUAL` or `SKIPPED`
-> findings when Graph API equivalents are unavailable.
+> **Note:** Exchange Online, Microsoft Teams, and SharePoint Online controls
+> have no Microsoft Graph equivalent — the scanner collects them via a
+> PowerShell bridge instead. Exchange and Teams checks run automatically
+> using your existing `--client-secret` (access-token app-only auth); this
+> requires `pwsh` + the `ExchangeOnlineManagement`/`MicrosoftTeams` modules
+> installed, plus the `Exchange.ManageAsApp`/`Organization.Read.All`
+> permissions and the Exchange/Teams Administrator roles granted to the app.
+> SharePoint requires a certificate instead (`--ms365-cert-path`). See
+> [readmes/ms365.md](readmes/ms365.md#powershell-bridge-exchange--teams--sharepoint)
+> for full setup steps. Without any of this, those controls return `MANUAL`
+> or `SKIPPED` findings exactly as before.
 
 ---
 

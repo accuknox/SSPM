@@ -1,6 +1,6 @@
 """
 CIS MS365 8.5.2 (L1) – Ensure anonymous users and dial-in callers can't start
-a meeting (Manual)
+a meeting (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -24,9 +25,9 @@ class CIS_8_5_2(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.5.2",
         title="Ensure anonymous users and dial-in callers can't start a meeting",
-        section="8.5 Teams Meetings",
+        section="8.5 Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -40,13 +41,13 @@ class CIS_8_5_2(MS365Rule):
         ),
         impact="Meetings must be started by authenticated meeting participants.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowAnonymousUsersToStartMeeting\n\n"
-            "Compliant: AllowAnonymousUsersToStartMeeting = False"
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+            "AllowAnonymousUsersToStartMeeting\n\n"
+            "Ensure AllowAnonymousUsersToStartMeeting is False."
         ),
         remediation=(
             "Microsoft Teams PowerShell:\n"
-            "  Set-CsTeamsMeetingPolicy -AllowAnonymousUsersToStartMeeting $false"
+            "  Set-CsTeamsMeetingPolicy -Identity Global -AllowAnonymousUsersToStartMeeting $false"
         ),
         default_value="Anonymous users cannot start meetings by default.",
         references=[
@@ -66,4 +67,51 @@ class CIS_8_5_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._skip(
+                reason=(
+                    "Whether anonymous users and dial-in callers can start "
+                    "meetings requires the Microsoft Teams PowerShell bridge "
+                    "(Connect-MicrosoftTeams with certificate app-only auth), "
+                    "which is not configured for this scan. Verify manually: "
+                    "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                    "AllowAnonymousUsersToStartMeeting — ensure it is False."
+                )
+            )
+
+        value = policy.get("AllowAnonymousUsersToStartMeeting")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowAnonymousUsersToStartMeeting": value},
+                description="Whether anonymous users/dial-in callers can start a meeting.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowAnonymousUsersToStartMeeting is False.", evidence=evidence
+            )
+        if value is True:
+            return self._fail(
+                "AllowAnonymousUsersToStartMeeting is True; anonymous users and "
+                "dial-in callers can start meetings.",
+                evidence=evidence,
+            )
+        return self._skip(
+            reason=(
+                f"AllowAnonymousUsersToStartMeeting has an unexpected value "
+                f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
+                "-Identity Global | fl AllowAnonymousUsersToStartMeeting."
+            )
+        )

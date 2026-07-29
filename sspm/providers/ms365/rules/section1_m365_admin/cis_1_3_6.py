@@ -6,6 +6,11 @@ Profile Applicability: E5 Level 2
 
 Customer Lockbox ensures that Microsoft cannot access tenant content to perform
 a service operation without explicit approval from the customer.
+
+Per the official CIS audit procedure, this is read via Exchange Online
+PowerShell (Get-OrganizationConfig -> CustomerLockBoxEnabled). There is no
+Microsoft Graph field for this (the organization resource has no
+"isCustomerLockboxEnabled" property — that assumption was incorrect).
 """
 
 from __future__ import annotations
@@ -49,13 +54,13 @@ class CIS_1_3_6(MS365Rule):
             "If not approved, Microsoft cannot access the data."
         ),
         audit_procedure=(
-            "Using Microsoft Graph:\n"
-            "  GET /admin/microsoft365Apps/installation/policy\n"
-            "  Or check organization settings:\n"
-            "  GET /organization\n"
-            "  Look for customerLockBoxEnabled property.\n\n"
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-OrganizationConfig | Select-Object CustomerLockBoxEnabled\n"
+            "  Verify the value is True.\n\n"
             "Microsoft 365 admin center → Settings > Org settings > Security & privacy "
-            "> Customer Lockbox."
+            "> Customer Lockbox → verify 'Require approval for all data access "
+            "requests' is checked."
         ),
         remediation=(
             "Microsoft 365 admin center → Settings > Org settings > Security & privacy.\n"
@@ -80,29 +85,38 @@ class CIS_1_3_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        org = data.get("organization")
-        if org is None:
-            return self._skip("Could not retrieve organization data.")
+        if "organization_config" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange organization configuration: "
+                f"{data.errors.get('organization_config')}"
+            )
 
-        # Customer Lockbox setting is available on the organization object
-        lockbox_enabled = org.get("isCustomerLockboxEnabled")
-
-        if lockbox_enabled is None:
-            return self._manual()
+        org_config = data.get("organization_config")
+        if org_config is None:
+            return self._skip(
+                "CustomerLockBoxEnabled requires the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. "
+                "Verify manually: Get-OrganizationConfig | Select-Object "
+                "CustomerLockBoxEnabled — must be True."
+            )
 
         evidence = [
             Evidence(
-                source="graph/organization",
-                data={"isCustomerLockboxEnabled": lockbox_enabled},
-                description="Customer Lockbox setting from organization object.",
+                source="Exchange Online PowerShell: Get-OrganizationConfig",
+                data={"CustomerLockBoxEnabled": org_config.get("CustomerLockBoxEnabled")},
+                description="Organization configuration.",
             )
         ]
 
-        if lockbox_enabled:
-            return self._pass("Customer Lockbox is enabled.", evidence=evidence)
+        if org_config.get("CustomerLockBoxEnabled") is True:
+            return self._pass(
+                "Customer Lockbox is enabled (CustomerLockBoxEnabled=True).",
+                evidence=evidence,
+            )
 
         return self._fail(
-            "Customer Lockbox is not enabled. Microsoft support engineers can access "
-            "tenant data without explicit customer approval.",
+            "Customer Lockbox is not enabled "
+            f"(CustomerLockBoxEnabled={org_config.get('CustomerLockBoxEnabled')!r}).",
             evidence=evidence,
         )

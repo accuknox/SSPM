@@ -82,7 +82,10 @@ class CIS_7_2_4(MS365Rule):
             onedrive_sharing = settings.get("sharingCapability")
 
         if onedrive_sharing is None:
-            return self._manual()
+            return self._skip(
+                "SharePoint settings were retrieved but included neither "
+                "oneDriveSharingCapability nor sharingCapability."
+            )
 
         cap_names = {
             0: "Disabled",

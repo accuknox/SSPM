@@ -42,8 +42,12 @@ class CIS_7_2_5(MS365Rule):
         ),
         impact="External users will not be able to share content they access but don't own.",
         audit_procedure=(
-            "GET /admin/sharepoint/settings\n"
-            "Check: preventExternalUsersFromResharing = true"
+            "Using Microsoft Graph:\n"
+            "  GET /admin/sharepoint/settings\n"
+            "  Check: isResharingByExternalUsersEnabled = false (Graph exposes\n"
+            "  the inverse of the Get-SPOTenant property).\n\n"
+            "Using SharePoint Online PowerShell:\n"
+            "  Get-SPOTenant | ft PreventExternalUsersFromResharing → True"
         ),
         remediation=(
             "SharePoint admin center → Policies > Sharing.\n"
@@ -69,16 +73,40 @@ class CIS_7_2_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
+        if "sharepoint_settings" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve SharePoint settings: "
+                f"{data.errors.get('sharepoint_settings')}"
+            )
+
         settings = data.get("sharepoint_settings")
         if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+            return self._skip(
+                "Could not retrieve SharePoint settings. Requires the "
+                "SharePointTenantSettings.Read.All application permission."
+            )
 
-        prevent_resharing = settings.get("preventExternalUsersFromResharing")
+        # Graph's isResharingByExternalUsersEnabled is the inverse of
+        # Get-SPOTenant's PreventExternalUsersFromResharing. Prefer the
+        # SPO property when a SharePoint PowerShell session supplied it.
+        prevent_resharing = settings.get("PreventExternalUsersFromResharing")
+        source_property = "PreventExternalUsersFromResharing"
+        if prevent_resharing is None:
+            resharing_enabled = settings.get("isResharingByExternalUsersEnabled")
+            source_property = "isResharingByExternalUsersEnabled (inverted)"
+            prevent_resharing = (
+                None if resharing_enabled is None else not resharing_enabled
+            )
 
         evidence = [
             Evidence(
                 source="graph/admin/sharepoint/settings",
-                data={"preventExternalUsersFromResharing": prevent_resharing},
+                data={
+                    "isResharingByExternalUsersEnabled": settings.get(
+                        "isResharingByExternalUsersEnabled"
+                    ),
+                    "PreventExternalUsersFromResharing": prevent_resharing,
+                },
                 description="SharePoint resharing restriction setting.",
             )
         ]
@@ -86,15 +114,19 @@ class CIS_7_2_5(MS365Rule):
         if prevent_resharing is True:
             return self._pass(
                 "External users cannot re-share items they don't own "
-                "(preventExternalUsersFromResharing = true).",
+                f"({source_property}).",
                 evidence=evidence,
             )
 
         if prevent_resharing is False:
             return self._fail(
                 "External users are allowed to re-share items they don't own "
-                "(preventExternalUsersFromResharing = false).",
+                f"({source_property}).",
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "SharePoint settings were retrieved but contained neither "
+            "isResharingByExternalUsersEnabled nor "
+            "PreventExternalUsersFromResharing."
+        )

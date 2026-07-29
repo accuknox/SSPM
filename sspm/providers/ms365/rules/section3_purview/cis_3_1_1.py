@@ -5,6 +5,12 @@ Profile Applicability: E3 Level 1, E5 Level 1
 
 The Microsoft Purview unified audit log must be enabled so that administrator
 and user activity is recorded and available for security investigations.
+
+Per the official CIS audit procedure, this is read via Exchange Online /
+Security & Compliance PowerShell (Get-AdminAuditLogConfig ->
+UnifiedAuditLogIngestionEnabled). There is no Microsoft Graph field that
+reflects this specific setting — sign-in log query accessibility (previously
+used here as a proxy) does not actually verify it.
 """
 
 from __future__ import annotations
@@ -46,11 +52,11 @@ class CIS_3_1_1(MS365Rule):
         impact="Minimal.  Audit logging has negligible performance impact.",
         audit_procedure=(
             "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
             "  Get-AdminAuditLogConfig | Select-Object UnifiedAuditLogIngestionEnabled\n"
-            "  Expected: UnifiedAuditLogIngestionEnabled = True\n\n"
-            "Or check via Microsoft Purview compliance portal:\n"
-            "  https://compliance.microsoft.com → Audit > Start recording user and "
-            "admin activity."
+            "  Ensure UnifiedAuditLogIngestionEnabled is True.\n\n"
+            "Microsoft Purview (https://purview.microsoft.com) → Solutions > Audit → "
+            "verify search results are returned for a recent activity."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -85,28 +91,45 @@ class CIS_3_1_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        # Purview audit log status is checked via Graph beta security endpoint
-        audit_settings = data.get("audit_log_settings")
-
-        if audit_settings is None:
+        if "admin_audit_log_config" in (data.errors or {}):
             return self._skip(
-                "Could not retrieve audit log settings. "
-                "Requires Compliance Administrator role."
+                "Could not retrieve Exchange admin audit log configuration: "
+                f"{data.errors.get('admin_audit_log_config')}"
             )
 
-        # If the API returned results (queries work), auditing is enabled
-        # A more precise check requires Exchange Online PowerShell
-        if isinstance(audit_settings, list):
-            return self._pass(
-                "Microsoft 365 unified audit log appears to be enabled "
-                "(audit log queries are accessible).",
-                evidence=[
-                    Evidence(
-                        source="graph/security/auditLog/queries",
-                        data={"queryable": True},
-                        description="Audit log API is accessible.",
+        config = data.get("admin_audit_log_config")
+        if config is None:
+            return self._skip(
+                "UnifiedAuditLogIngestionEnabled requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-AdminAuditLogConfig | "
+                "Select-Object UnifiedAuditLogIngestionEnabled — must be "
+                "True."
+            )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-AdminAuditLogConfig",
+                data={
+                    "UnifiedAuditLogIngestionEnabled": config.get(
+                        "UnifiedAuditLogIngestionEnabled"
                     )
-                ],
+                },
+                description="Admin audit log configuration.",
+            )
+        ]
+
+        if config.get("UnifiedAuditLogIngestionEnabled") is True:
+            return self._pass(
+                "The Microsoft 365 unified audit log is enabled "
+                "(UnifiedAuditLogIngestionEnabled=True).",
+                evidence=evidence,
             )
 
-        return self._manual()
+        return self._fail(
+            "The Microsoft 365 unified audit log is not enabled "
+            "(UnifiedAuditLogIngestionEnabled="
+            f"{config.get('UnifiedAuditLogIngestionEnabled')!r}).",
+            evidence=evidence,
+        )

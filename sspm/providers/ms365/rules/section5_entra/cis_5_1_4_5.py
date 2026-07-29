@@ -105,4 +105,7 @@ class CIS_5_1_4_5(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "The device registration policy does not report a "
+            f"localAdminPassword.isEnabled value (value: {is_enabled!r})."
+        )

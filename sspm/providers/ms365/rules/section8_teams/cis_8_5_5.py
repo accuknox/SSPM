@@ -1,6 +1,6 @@
 """
 CIS MS365 8.5.5 (L1) – Ensure meeting chat does not allow anonymous users
-(Manual)
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -26,7 +27,7 @@ class CIS_8_5_5(MS365Rule):
         title="Ensure meeting chat does not allow anonymous users",
         section="8.5 Teams Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -40,13 +41,15 @@ class CIS_8_5_5(MS365Rule):
         ),
         impact="Anonymous users will not be able to post in meeting chat.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object MeetingChatEnabledType\n\n"
-            "Compliant: MeetingChatEnabledType = 'Enabled' (not 'EnabledExceptAnonymous')"
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl MeetingChatEnabledType\n\n"
+            "Ensure MeetingChatEnabledType is EnabledExceptAnonymous or a more "
+            "restrictive value (EnabledInMeetingOnlyForAllExceptAnonymous, "
+            "Disabled)."
         ),
         remediation=(
-            "Microsoft Teams admin center → Meetings > Meeting policies.\n"
-            "Set meeting chat to not allow anonymous participants."
+            "Microsoft Teams PowerShell:\n"
+            "  Set-CsTeamsMeetingPolicy -Identity Global -MeetingChatEnabledType "
+            "EnabledExceptAnonymous"
         ),
         default_value="Meeting chat settings vary by policy.",
         references=[
@@ -66,4 +69,59 @@ class CIS_8_5_5(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._skip(
+                reason=(
+                    "Whether anonymous users can use meeting chat requires the "
+                    "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured "
+                    "for this scan. Verify manually: Get-CsTeamsMeetingPolicy "
+                    "-Identity Global | fl MeetingChatEnabledType — ensure it is "
+                    "EnabledExceptAnonymous or a more restrictive value "
+                    "(EnabledInMeetingOnlyForAllExceptAnonymous, Disabled)."
+                )
+            )
+
+        value = policy.get("MeetingChatEnabledType")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"MeetingChatEnabledType": value},
+                description="Meeting chat availability for anonymous users.",
+            )
+        ]
+
+        compliant_values = {
+            "EnabledExceptAnonymous",
+            "EnabledInMeetingOnlyForAllExceptAnonymous",
+            "Disabled",
+        }
+        if value in compliant_values:
+            return self._pass(
+                f"MeetingChatEnabledType is {value!r}, which prevents anonymous "
+                "users from using meeting chat.",
+                evidence=evidence,
+            )
+        if value is not None:
+            return self._fail(
+                f"MeetingChatEnabledType is {value!r}, which allows anonymous "
+                "users to use meeting chat.",
+                evidence=evidence,
+            )
+        return self._skip(
+            reason=(
+                "MeetingChatEnabledType is missing/unexpected; verify manually "
+                "via Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                "MeetingChatEnabledType."
+            )
+        )

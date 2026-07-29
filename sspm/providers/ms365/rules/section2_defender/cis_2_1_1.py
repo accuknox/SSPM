@@ -1,6 +1,6 @@
 """
 CIS MS365 2.1.1 (L1) – Ensure Safe Links for Office Applications is Enabled
-(Manual)
+(Automated)
 
 Profile Applicability: E5 Level 1
 
@@ -10,10 +10,13 @@ in email messages and Office documents.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -29,7 +32,7 @@ class CIS_2_1_1(MS365Rule):
         title="Ensure Safe Links for Office Applications is Enabled",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -49,28 +52,40 @@ class CIS_2_1_1(MS365Rule):
             "link clicks."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-SafeLinksPolicy | Select Name, EnableSafeLinksForOffice, "
-            "IsEnabled, DeliverMessageAfterScan, EnableForInternalSenders\n\n"
-            "Compliant configuration:\n"
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-SafeLinksPolicy | Select-Object Identity, "
+            "EnableSafeLinksForEmail, EnableSafeLinksForTeams, "
+            "EnableSafeLinksForOffice, TrackClicks, AllowClickThrough, ScanUrls, "
+            "EnableForInternalSenders, DeliverMessageAfterScan, "
+            "DisableUrlRewrite\n\n"
+            "Verify at least one policy has:\n"
+            "  • EnableSafeLinksForEmail = True\n"
+            "  • EnableSafeLinksForTeams = True\n"
             "  • EnableSafeLinksForOffice = True\n"
-            "  • IsEnabled = True\n"
+            "  • TrackClicks = True\n"
+            "  • AllowClickThrough = False\n"
+            "  • ScanUrls = True\n"
+            "  • EnableForInternalSenders = True\n"
             "  • DeliverMessageAfterScan = True\n"
-            "  • EnableForInternalSenders = True"
+            "  • DisableUrlRewrite = False"
         ),
         remediation=(
             "Microsoft Defender portal (https://security.microsoft.com):\n"
             "  Email & Collaboration > Policies & Rules > Threat policies > Safe Links.\n"
             "  Create or edit a Safe Links policy:\n"
-            "  • Enable Safe Links for Office apps\n"
+            "  • Enable Safe Links for Email, Teams, and Office apps\n"
             "  • Apply to all recipients\n\n"
             "PowerShell:\n"
-            "  Set-SafeLinksPolicy -Identity 'Default' -EnableSafeLinksForOffice $true "
-            "-IsEnabled $true -EnableForInternalSenders $true"
+            "  Set-SafeLinksPolicy -Identity 'Default' -EnableSafeLinksForEmail $true "
+            "-EnableSafeLinksForTeams $true -EnableSafeLinksForOffice $true "
+            "-TrackClicks $true -AllowClickThrough $false -ScanUrls $true "
+            "-EnableForInternalSenders $true -DeliverMessageAfterScan $true "
+            "-DisableUrlRewrite $false"
         ),
         default_value="Safe Links is not enabled by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/safe-links-about",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/set-safelinkspolicy",
         ],
         cis_controls=[
             CISControl(
@@ -85,5 +100,66 @@ class CIS_2_1_1(MS365Rule):
         tags=["defender", "safe-links", "anti-phishing", "email-security"],
     )
 
+    _REQUIRED: ClassVar[dict] = {
+        "EnableSafeLinksForEmail": True,
+        "EnableSafeLinksForTeams": True,
+        "EnableSafeLinksForOffice": True,
+        "TrackClicks": True,
+        "AllowClickThrough": False,
+        "ScanUrls": True,
+        "EnableForInternalSenders": True,
+        "DeliverMessageAfterScan": True,
+        "DisableUrlRewrite": False,
+    }
+
+    def _is_compliant(self, policy: dict) -> bool:
+        return all(policy.get(k) == v for k, v in self._REQUIRED.items())
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "safe_links_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Safe Links policies: "
+                f"{data.errors.get('safe_links_policies')}"
+            )
+
+        policies = data.get("safe_links_policies")
+        if policies is None:
+            return self._skip(
+                "Safe Links policy configuration requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-SafeLinksPolicy | "
+                "Select-Object Identity, EnableSafeLinksForEmail, "
+                "EnableSafeLinksForTeams, EnableSafeLinksForOffice, "
+                "TrackClicks, AllowClickThrough, ScanUrls, "
+                "EnableForInternalSenders, DeliverMessageAfterScan, "
+                "DisableUrlRewrite."
+            )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-SafeLinksPolicy",
+                data=policies,
+                description="Safe Links policies.",
+            )
+        ]
+
+        compliant = [p for p in policies if self._is_compliant(p)]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                f"At least one Safe Links policy ({names}) has all required "
+                "settings enabled (EnableSafeLinksForEmail, "
+                "EnableSafeLinksForTeams, EnableSafeLinksForOffice, "
+                "TrackClicks, ScanUrls, EnableForInternalSenders, "
+                "DeliverMessageAfterScan = True; AllowClickThrough, "
+                "DisableUrlRewrite = False).",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No Safe Links policy has all required settings enabled. "
+            f"Found {len(policies)} policy(ies), none matching the "
+            "compliant configuration.",
+            evidence=evidence,
+        )

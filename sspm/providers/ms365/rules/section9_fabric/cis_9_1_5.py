@@ -1,8 +1,11 @@
 """
-CIS MS365 9.1.5 (L1) – Ensure R and Python visuals are disabled in
-Microsoft Fabric (Manual)
+CIS MS365 9.1.5 (L2) – Ensure 'Interact with and share R and Python' visuals
+is 'Disabled' (Automated)
 
-Profile Applicability: E3 Level 1, E5 Level 1
+Profile Applicability: E3 Level 2, E5 Level 2
+
+Automated via the Fabric Admin REST API (GET /v1/admin/tenantsettings,
+settingName RScriptVisual).
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,11 +27,11 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_9_1_5(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-9.1.5",
-        title="Ensure R and Python visuals are disabled in Microsoft Fabric",
+        title="Ensure 'Interact with and share R and Python' visuals is 'Disabled'",
         section="9.1 Microsoft Fabric",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
-        profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
+        assessment_status=AssessmentStatus.AUTOMATED,
+        profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.MEDIUM,
         description=(
             "R and Python visuals in Microsoft Fabric execute code that runs "
@@ -41,9 +45,13 @@ class CIS_9_1_5(MS365Rule):
         ),
         impact="Users will not be able to use R or Python visuals in Power BI reports.",
         audit_procedure=(
-            "Microsoft Fabric admin portal:\n"
-            "  Tenant settings > R and Python visuals settings:\n"
-            "  Check if R and Python visuals are enabled"
+            "Microsoft Fabric admin portal (app.powerbi.com/admin-portal):\n"
+            "  Tenant settings > R and Python visuals settings.\n"
+            "  Ensure 'Interact with and share R and Python visuals' is Disabled.\n\n"
+            "Via the Fabric admin REST API (app-only; the tenant must enable\n"
+            "'Service principals can access read-only admin APIs'):\n"
+            "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
+            "  Locate settingName RScriptVisual. Pass if enabled=false."
         ),
         remediation=(
             "Microsoft Fabric admin portal → Tenant settings:\n"
@@ -66,5 +74,36 @@ class CIS_9_1_5(MS365Rule):
         tags=["fabric", "power-bi", "r-visuals", "python-visuals", "code-execution"],
     )
 
+    SETTING_NAME = "RScriptVisual"
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "fabric_tenant_settings" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Microsoft Fabric tenant settings: "
+                f"{data.errors.get('fabric_tenant_settings')}"
+            )
+
+        setting = self._get_fabric_setting(data, self.SETTING_NAME)
+        if setting is None:
+            return self._skip(
+                "The Microsoft Fabric admin API did not return a "
+                f"{self.SETTING_NAME} setting for this tenant. Verify "
+                "manually in the Fabric admin portal > Tenant settings > R and Python visuals settings."
+            )
+
+        evidence = [
+            Evidence(
+                source="fabric/v1/admin/tenantsettings",
+                data=setting,
+                description=f"Fabric tenant setting: {self.SETTING_NAME}",
+            )
+        ]
+        if not setting.get("enabled"):
+            return self._pass(
+                "Interact with and share R and Python visuals is disabled.",
+                evidence=evidence,
+            )
+        return self._fail(
+            "Interact with and share R and Python visuals is enabled.",
+            evidence=evidence,
+        )

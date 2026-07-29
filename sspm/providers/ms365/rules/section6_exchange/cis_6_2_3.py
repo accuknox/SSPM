@@ -1,6 +1,6 @@
 """
-CIS MS365 6.2.3 (L1) – Ensure external sender identification in Outlook is
-enabled (Manual)
+CIS MS365 6.2.3 (L1) – Ensure email from external senders is identified
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_2_3(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.2.3",
-        title="Ensure external sender identification in Outlook is enabled",
-        section="6.2 Mail Transport",
+        title="Ensure email from external senders is identified",
+        section="6.2 Mail flow",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -41,9 +42,11 @@ class CIS_6_2_3(MS365Rule):
         ),
         impact="Users will see a visual indicator on emails from external senders.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-ExternalInOutlook | Select-Object Enabled\n\n"
-            "Compliant: Enabled = True"
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-ExternalInOutlook\n\n"
+            "For each identity verify Enabled = True and that AllowList only "
+            "contains explicitly permitted addresses/domains."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -67,4 +70,60 @@ class CIS_6_2_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-ExternalInOutlook has no Microsoft Graph equivalent; it is only
+        # reachable via Exchange Online Remote PowerShell.
+        if "external_in_outlook" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve external sender identification settings: "
+                f"{data.errors.get('external_in_outlook')}"
+            )
+
+        identities = data.get("external_in_outlook")
+        if identities is None:
+            return self._skip(
+                "External sender identification settings require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: Get-ExternalInOutlook - Enabled "
+                "must be True, and AllowList should only contain explicitly "
+                "permitted addresses/domains."
+            )
+
+        if not identities:
+            return self._skip(
+                "Get-ExternalInOutlook returned no identities to evaluate; "
+                "verify manually."
+            )
+
+        evidence = [
+            Evidence(
+                source="Get-ExternalInOutlook",
+                data=identities,
+                description="External sender identification settings per identity.",
+            )
+        ]
+
+        disabled = [
+            i.get("Identity", "") for i in identities if not i.get("Enabled")
+        ]
+        if disabled:
+            return self._fail(
+                "External sender identification is not enabled for: "
+                + ", ".join(disabled),
+                evidence=evidence,
+            )
+
+        allow_lists = {
+            i.get("Identity", ""): i.get("AllowList")
+            for i in identities
+            if i.get("AllowList")
+        }
+        message = "External sender identification (Enabled = True) is configured for all identities."
+        if allow_lists:
+            message += (
+                " Note: one or more identities have an AllowList configured "
+                "- manually confirm it only contains explicitly permitted "
+                f"addresses/domains: {allow_lists}"
+            )
+
+        return self._pass(message, evidence=evidence)

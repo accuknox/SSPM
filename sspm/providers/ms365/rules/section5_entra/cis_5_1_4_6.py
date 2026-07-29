@@ -1,8 +1,14 @@
 """
-CIS MS365 5.1.4.6 (L1) – Ensure users are not allowed to recover BitLocker
-keys from the Entra portal (Automated)
+CIS MS365 5.1.4.6 (L2) – Ensure users are restricted from recovering
+BitLocker keys (Automated)
 
-Profile Applicability: E3 Level 1, E5 Level 1
+Profile Applicability: E3 Level 2, E5 Level 2
+
+Per the official CIS audit procedure, this is read from the tenant-wide
+authorization policy (GET /policies/authorizationPolicy ->
+defaultUserRolePermissions.allowedToReadBitlockerKeysForOwnedDevice), NOT
+from deviceRegistrationPolicy — a prior implementation checked unrelated,
+non-existent fields on the wrong resource.
 """
 
 from __future__ import annotations
@@ -24,11 +30,11 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_5_1_4_6(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-5.1.4.6",
-        title="Ensure users are not allowed to recover BitLocker keys from the Entra portal",
+        title="Ensure users are restricted from recovering BitLocker keys",
         section="5.1.4 Devices",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
         assessment_status=AssessmentStatus.AUTOMATED,
-        profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
+        profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.HIGH,
         description=(
             "Regular users should not be able to retrieve BitLocker recovery keys "
@@ -45,11 +51,13 @@ class CIS_5_1_4_6(MS365Rule):
             "them will need to contact IT support for BitLocker recovery assistance."
         ),
         audit_procedure=(
-            "Using Microsoft Graph (beta):\n"
-            "  GET /beta/policies/deviceRegistrationPolicy\n"
-            "  Check if there are settings restricting BitLocker key access.\n\n"
+            "Using Microsoft Graph:\n"
+            "  GET /policies/authorizationPolicy\n"
+            "  (Get-MgPolicyAuthorizationPolicy).DefaultUserRolePermissions\n"
+            "  Ensure AllowedToReadBitlockerKeysForOwnedDevice is False.\n\n"
             "Microsoft Entra admin center → Identity > Devices > Device settings:\n"
-            "  'Restrict users from recovering the BitLocker key(s) for their owned devices'"
+            "  'Restrict users from recovering the BitLocker key(s) for their owned "
+            "devices' should be Yes."
         ),
         remediation=(
             "Microsoft Entra admin center → Identity > Devices > Device settings.\n"
@@ -73,32 +81,44 @@ class CIS_5_1_4_6(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        device_reg_policy = data.get("device_registration_policy")
-        if device_reg_policy is None:
+        auth_policy = data.get("authorization_policy")
+        if auth_policy is None:
             return self._skip(
-                "Could not retrieve device registration policy. "
-                "Requires Policy.Read.All permission (beta)."
+                "Could not retrieve authorization policy. "
+                "Requires Policy.Read.All permission."
             )
 
-        # Check for BitLocker key restriction setting
-        # This field may be in different locations in the policy object
-        bitlocker_restricted = device_reg_policy.get("isDeviceAdminConfigured")
-        # Alternative field names
-        if bitlocker_restricted is None:
-            bitlocker_restricted = device_reg_policy.get("restrictBitLockerRecovery")
+        default_perms = auth_policy.get("defaultUserRolePermissions") or {}
+        can_read_bitlocker_keys = default_perms.get(
+            "allowedToReadBitlockerKeysForOwnedDevice"
+        )
 
         evidence = [
             Evidence(
-                source="graph/beta/policies/deviceRegistrationPolicy",
-                data=device_reg_policy,
-                description="Device registration policy settings.",
+                source="graph/policies/authorizationPolicy",
+                data={
+                    "defaultUserRolePermissions.allowedToReadBitlockerKeysForOwnedDevice": (
+                        can_read_bitlocker_keys
+                    )
+                },
+                description="Tenant-wide default user role permissions.",
             )
         ]
 
-        if bitlocker_restricted is True:
+        if can_read_bitlocker_keys is False:
             return self._pass(
-                "Users are restricted from recovering BitLocker keys.",
+                "Users are restricted from recovering BitLocker keys "
+                "(allowedToReadBitlockerKeysForOwnedDevice = false).",
                 evidence=evidence,
             )
-
-        return self._manual()
+        if can_read_bitlocker_keys is True:
+            return self._fail(
+                "Users can recover BitLocker keys for their owned devices "
+                "(allowedToReadBitlockerKeysForOwnedDevice = true).",
+                evidence=evidence,
+            )
+        return self._skip(
+            "The device registration policy does not report an "
+            "allowedToReadBitlockerKeysForOwnedDevice value (value: "
+            f"{can_read_bitlocker_keys!r})."
+        )

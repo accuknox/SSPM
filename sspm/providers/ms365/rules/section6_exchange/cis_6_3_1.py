@@ -1,6 +1,6 @@
 """
-CIS MS365 6.3.1 (L2) – Ensure users cannot install add-ins in Outlook
-(Manual)
+CIS MS365 6.3.1 (L2) – Ensure users installing Outlook add-ins is not allowed
+(Automated)
 
 Profile Applicability: E3 Level 2, E5 Level 2
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_6_3_1(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-6.3.1",
-        title="Ensure users cannot install add-ins in Outlook",
+        title="Ensure users installing Outlook add-ins is not allowed",
         section="6.3 Add-ins",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L2, CISProfile.E5_L2],
         severity=Severity.LOW,
         description=(
@@ -41,10 +42,15 @@ class CIS_6_3_1(MS365Rule):
         ),
         impact="Users must request admin deployment of Outlook add-ins.",
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-RoleAssignmentPolicy | Select Name, AssignedRoles\n"
-            "  Look for policies with 'My Custom Apps' or 'My Marketplace Apps' roles\n\n"
-            "Compliant: No users have 'My Custom Apps' or 'My Marketplace Apps' roles."
+            "Exchange Online PowerShell:\n"
+            "  Connect-ExchangeOnline\n"
+            "  Get-EXOMailbox -PropertySets Policy | Select-Object -Unique "
+            "RoleAssignmentPolicy\n"
+            "  For each policy returned: Get-RoleAssignmentPolicy -Identity "
+            "<policy>\n\n"
+            "Compliant: 'My Custom Apps', 'My Marketplace Apps', and 'My "
+            "ReadWriteMailbox Apps' are NOT present in AssignedRoles for any "
+            "policy."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -69,5 +75,57 @@ class CIS_6_3_1(MS365Rule):
         tags=["exchange", "outlook", "add-ins", "app-control"],
     )
 
+    # Add-in installation roles that CIS requires to be absent.
+    _ADD_IN_ROLES = frozenset(
+        {"My Custom Apps", "My Marketplace Apps", "My ReadWriteMailbox Apps"}
+    )
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-RoleAssignmentPolicy has no Microsoft Graph equivalent; it is
+        # only reachable via Exchange Online Remote PowerShell.
+        if "role_assignment_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Exchange role assignment policies: "
+                f"{data.errors.get('role_assignment_policies')}"
+            )
+
+        policies = data.get("role_assignment_policies")
+        if policies is None:
+            return self._skip(
+                "Role assignment policies require the Exchange Online "
+                "PowerShell bridge (Connect-ExchangeOnline with certificate "
+                "app-only auth), which is not configured for this scan. Verify "
+                "manually: Get-RoleAssignmentPolicy - ensure 'My Custom "
+                "Apps', 'My Marketplace Apps', and 'My ReadWriteMailbox Apps' "
+                "are not present in AssignedRoles for any policy."
+            )
+
+        offending = []
+        for policy in policies or []:
+            assigned = set(policy.get("AssignedRoles") or [])
+            present = assigned & self._ADD_IN_ROLES
+            if present:
+                name = policy.get("Name") or policy.get("Identity", "")
+                offending.append(f"{name}: {', '.join(sorted(present))}")
+
+        evidence = [
+            Evidence(
+                source="Get-RoleAssignmentPolicy",
+                data=policies,
+                description="Role assignment policies and their AssignedRoles.",
+            )
+        ]
+
+        if offending:
+            return self._fail(
+                "One or more role assignment policies allow users to install "
+                "Outlook add-ins: " + " | ".join(offending),
+                evidence=evidence,
+            )
+
+        return self._pass(
+            "No role assignment policy includes 'My Custom Apps', 'My "
+            "Marketplace Apps', or 'My ReadWriteMailbox Apps' in "
+            "AssignedRoles.",
+            evidence=evidence,
+        )

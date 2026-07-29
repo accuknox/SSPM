@@ -67,35 +67,50 @@ class CIS_7_2_10(MS365Rule):
         tags=["sharepoint", "verification-code", "reauthentication", "external-sharing"],
     )
 
-    async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+    # CIS: EmailAttestationRequired True, EmailAttestationReAuthDays <= 15.
+    MAX_REAUTH_DAYS = 15
 
-        attestation_required = settings.get("emailAttestationRequired")
-        reauth_days = settings.get("emailAttestationReAuthDays")
+    async def check(self, data: CollectedData):
+        # These properties have no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose them.
+        settings, skip = self._spo_tenant_or_skip(
+            data, "EmailAttestationRequired,EmailAttestationReAuthDays"
+        )
+        if skip is not None:
+            return skip
+
+        attestation_required = settings.get("EmailAttestationRequired")
+        reauth_days = settings.get("EmailAttestationReAuthDays")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
+                source="sharepoint/Get-SPOTenant",
                 data={
-                    "emailAttestationRequired": attestation_required,
-                    "emailAttestationReAuthDays": reauth_days,
+                    "EmailAttestationRequired": attestation_required,
+                    "EmailAttestationReAuthDays": reauth_days,
                 },
                 description="Email attestation reauthentication settings.",
             )
         ]
 
-        if attestation_required is True and reauth_days and reauth_days <= 30:
-            return self._pass(
-                f"Reauthentication with verification code required every {reauth_days} days.",
-                evidence=evidence,
-            )
-
-        if attestation_required is False:
+        if attestation_required is not True:
             return self._fail(
-                "Reauthentication with verification code is not required for external users.",
+                "Reauthentication with a verification code is not required for "
+                "external users "
+                f"(EmailAttestationRequired = {attestation_required}).",
                 evidence=evidence,
             )
 
-        return self._manual()
+        if isinstance(reauth_days, int) and reauth_days <= self.MAX_REAUTH_DAYS:
+            return self._pass(
+                "Reauthentication with a verification code is required every "
+                f"{reauth_days} days.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "Reauthentication with a verification code is required, but the "
+            f"interval of {reauth_days} days exceeds the CIS maximum of "
+            f"{self.MAX_REAUTH_DAYS} days.",
+            evidence=evidence,
+        )

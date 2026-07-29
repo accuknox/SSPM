@@ -74,18 +74,21 @@ class CIS_3_3_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        sensitivity_labels = data.get("sensitivity_labels")
-        if sensitivity_labels is None:
+        if "dlp_policies" in (data.errors or {}):
             return self._skip(
-                "Could not retrieve sensitivity labels data. "
-                "Requires InformationProtectionPolicy.Read.All permission."
+                "Could not retrieve sensitivity labels: "
+                f"{data.errors.get('dlp_policies')}"
             )
 
-        # Note: the collector uses dlp_policies key for beta sensitivity labels
-        # Try sensitivity_labels first, fall back to dlp_policies
-        labels = sensitivity_labels
-        if not labels:
-            labels = data.get("dlp_policies") or []
+        # The collector stores beta sensitivity labels under "dlp_policies".
+        # A tenant with no labels answers 404 ("policy is empty"), which the
+        # collector normalises to [] — that is a real FAIL, not a skip.
+        labels = data.get("dlp_policies")
+        if labels is None:
+            return self._skip(
+                "Sensitivity labels were not collected. Requires the "
+                "InformationProtectionPolicy.Read.All application permission."
+            )
 
         if labels:
             return self._pass(

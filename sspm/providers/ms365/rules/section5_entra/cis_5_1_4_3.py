@@ -47,10 +47,11 @@ class CIS_5_1_4_3(MS365Rule):
         audit_procedure=(
             "Using Microsoft Graph (beta):\n"
             "  GET /beta/policies/deviceRegistrationPolicy\n"
-            "  Check localAdminPassword settings and \n"
-            "  azureAdJoin.localAdmins.enableGlobalAdmins (or similar field).\n\n"
+            "  Check azureADJoin.localAdmins.enableGlobalAdmins.\n"
+            "  Ensure enableGlobalAdmins is False.\n\n"
             "Microsoft Entra admin center → Identity > Devices > Device settings:\n"
-            "  'Additional local administrators on all Microsoft Entra joined devices'"
+            "  'Global administrator role is added as local administrator on the "
+            "device during Microsoft Entra join (Preview)' should be No."
         ),
         remediation=(
             "Microsoft Entra admin center → Identity > Devices > Device settings.\n"
@@ -83,14 +84,17 @@ class CIS_5_1_4_3(MS365Rule):
                 "Requires Policy.Read.All permission (beta)."
             )
 
-        azure_ad_join = device_reg_policy.get("azureAdJoin") or {}
+        # Graph property is "azureADJoin" (capital AD), matching CIS's own
+        # PowerShell audit script exactly — a prior lowercase-"Ad" lookup here
+        # silently always missed the field.
+        azure_ad_join = device_reg_policy.get("azureADJoin") or {}
         local_admins = azure_ad_join.get("localAdmins") or {}
         enable_global_admins = local_admins.get("enableGlobalAdmins")
 
         evidence = [
             Evidence(
                 source="graph/beta/policies/deviceRegistrationPolicy",
-                data={"azureAdJoin.localAdmins.enableGlobalAdmins": enable_global_admins},
+                data={"azureADJoin.localAdmins.enableGlobalAdmins": enable_global_admins},
                 description="Device registration policy - global admin as local admin setting.",
             )
         ]
@@ -109,4 +113,7 @@ class CIS_5_1_4_3(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "The device registration policy does not report an "
+            f"enableGlobalAdmins value (value: {enable_global_admins!r})."
+        )

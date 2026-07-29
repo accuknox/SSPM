@@ -1,8 +1,11 @@
 """
-CIS MS365 9.1.10 (L1) – Ensure service principals cannot access the Microsoft
-Fabric API (Manual)
+CIS MS365 9.1.10 (L1) – Ensure access to APIs by service principals is
+restricted (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
+
+Automated via the Fabric Admin REST API (GET /v1/admin/tenantsettings,
+settingName ServicePrincipalAccessPermissionAPIs).
 """
 
 from __future__ import annotations
@@ -11,6 +14,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +27,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_9_1_10(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-9.1.10",
-        title="Ensure service principals cannot access the Microsoft Fabric API",
+        title="Ensure access to APIs by service principals is restricted",
         section="9.1 Microsoft Fabric",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -41,9 +45,16 @@ class CIS_9_1_10(MS365Rule):
         ),
         impact="Applications using service principals for Fabric API access will need to be reviewed.",
         audit_procedure=(
-            "Microsoft Fabric admin portal:\n"
-            "  Tenant settings > Developer settings:\n"
-            "  Check 'Allow service principals to use Fabric APIs' setting"
+            "Microsoft Fabric admin portal (app.powerbi.com/admin-portal):\n"
+            "  Tenant settings > Developer settings.\n"
+            "  Ensure 'Service principals can call Fabric public APIs' is "
+            "Disabled, or Enabled with specific security groups selected.\n\n"
+            "Via the Fabric admin REST API (app-only; the tenant must enable\n"
+            "'Service principals can access read-only admin APIs'):\n"
+            "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
+            "  Locate settingName ServicePrincipalAccessPermissionAPIs.\n"
+            "  Pass if enabled=false, or enabled=true AND "
+            "enabledSecurityGroups is non-empty."
         ),
         remediation=(
             "Microsoft Fabric admin portal → Tenant settings > Developer settings:\n"
@@ -66,5 +77,38 @@ class CIS_9_1_10(MS365Rule):
         tags=["fabric", "power-bi", "service-principals", "api-access"],
     )
 
+    SETTING_NAME = "ServicePrincipalAccessPermissionAPIs"
+
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "fabric_tenant_settings" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Microsoft Fabric tenant settings: "
+                f"{data.errors.get('fabric_tenant_settings')}"
+            )
+
+        setting = self._get_fabric_setting(data, self.SETTING_NAME)
+        if setting is None:
+            return self._skip(
+                "The Microsoft Fabric admin API did not return a "
+                f"{self.SETTING_NAME} setting for this tenant. Verify "
+                "manually in the Fabric admin portal > Tenant settings > Developer settings."
+            )
+
+        evidence = [
+            Evidence(
+                source="fabric/v1/admin/tenantsettings",
+                data=setting,
+                description=f"Fabric tenant setting: {self.SETTING_NAME}",
+            )
+        ]
+        if self._fabric_restricted_or_disabled(setting):
+            return self._pass(
+                "Access to Fabric public APIs by service principals is "
+                "restricted.",
+                evidence=evidence,
+            )
+        return self._fail(
+            "Any service principal can call Fabric public APIs (not scoped "
+            "to specific security groups).",
+            evidence=evidence,
+        )

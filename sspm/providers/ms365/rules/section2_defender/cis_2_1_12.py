@@ -1,6 +1,6 @@
 """
 CIS MS365 2.1.12 (L1) – Ensure the connection filter IP allow list is not used
-(Manual)
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -26,7 +27,7 @@ class CIS_2_1_12(MS365Rule):
         title="Ensure the connection filter IP allow list is not used",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -44,10 +45,10 @@ class CIS_2_1_12(MS365Rule):
             "be subject to normal spam and malware filtering."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-HostedConnectionFilterPolicy -Identity Default | "
-            "Select IPAllowList\n\n"
-            "Compliant: IPAllowList should be empty or $null."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-HostedConnectionFilterPolicy -Identity Default | "
+            "fl IPAllowList\n\n"
+            "Ensure IPAllowList is empty."
         ),
         remediation=(
             "Exchange Online PowerShell:\n"
@@ -58,6 +59,7 @@ class CIS_2_1_12(MS365Rule):
         default_value="IP allow list is empty by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/connection-filter-policies-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-hostedconnectionfilterpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -73,4 +75,39 @@ class CIS_2_1_12(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "hosted_connection_filter_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the hosted connection filter policy: "
+                f"{data.errors.get('hosted_connection_filter_policy')}"
+            )
+
+        policy = data.get("hosted_connection_filter_policy")
+        if policy is None:
+            return self._skip(
+                "The connection filter IP allow list requires the Exchange "
+                "Online PowerShell bridge (Connect-ExchangeOnline with "
+                "certificate app-only auth), which is not configured for "
+                "this scan. Verify manually: "
+                "Get-HostedConnectionFilterPolicy -Identity Default | fl "
+                "IPAllowList (should be empty)."
+            )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-HostedConnectionFilterPolicy",
+                data={"IPAllowList": policy.get("IPAllowList")},
+                description="Hosted connection filter policy (Default).",
+            )
+        ]
+
+        ip_allow_list = policy.get("IPAllowList") or []
+        if not ip_allow_list:
+            return self._pass(
+                "The connection filter IP allow list is empty.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            f"The connection filter IP allow list is not empty: {ip_allow_list}.",
+            evidence=evidence,
+        )

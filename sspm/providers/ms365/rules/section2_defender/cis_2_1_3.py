@@ -1,6 +1,6 @@
 """
 CIS MS365 2.1.3 (L1) – Ensure notifications for internal users sending malware
-is configured (Manual)
+is Enabled (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_2_1_3(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-2.1.3",
-        title="Ensure notifications for internal users sending malware is configured",
+        title="Ensure notifications for internal users sending malware is Enabled",
         section="2.1 Microsoft Defender for Office 365",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -44,11 +45,11 @@ class CIS_2_1_3(MS365Rule):
             "messages sent by internal users. This may increase alert volume."
         ),
         audit_procedure=(
-            "Using Exchange Online PowerShell:\n"
-            "  Get-MalwareFilterPolicy | Select Name, EnableInternalSenderAdminNotifications, "
-            "InternalSenderAdminAddress\n\n"
-            "Compliant: EnableInternalSenderAdminNotifications = True and "
-            "InternalSenderAdminAddress is set to a valid admin email."
+            "Connect to Exchange Online using Connect-ExchangeOnline.\n"
+            "Run: Get-MalwareFilterPolicy | fl Identity, "
+            "EnableInternalSenderAdminNotifications, InternalSenderAdminAddress\n\n"
+            "Ensure EnableInternalSenderAdminNotifications is True and "
+            "InternalSenderAdminAddress is defined."
         ),
         remediation=(
             "Microsoft Defender portal → Email & Collaboration > Policies & Rules > "
@@ -62,6 +63,7 @@ class CIS_2_1_3(MS365Rule):
         default_value="Internal sender admin notifications are disabled by default.",
         references=[
             "https://learn.microsoft.com/en-us/microsoft-365/security/office-365-security/anti-malware-policies-configure",
+            "https://learn.microsoft.com/en-us/powershell/module/exchange/get-malwarefilterpolicy",
         ],
         cis_controls=[
             CISControl(
@@ -77,4 +79,49 @@ class CIS_2_1_3(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        if "malware_filter_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve the malware filter policy: "
+                f"{data.errors.get('malware_filter_policy')}"
+            )
+
+        policies = data.get("malware_filter_policy")
+        if policies is None:
+            return self._skip(
+                "Internal sender malware notification settings require the "
+                "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
+                "with certificate app-only auth), which is not configured "
+                "for this scan. Verify manually: Get-MalwareFilterPolicy | "
+                "fl Identity, EnableInternalSenderAdminNotifications, "
+                "InternalSenderAdminAddress (should be True and a defined "
+                "address, respectively)."
+            )
+
+        evidence = [
+            Evidence(
+                source="Exchange Online PowerShell: Get-MalwareFilterPolicy",
+                data=policies,
+                description="Malware filter policies.",
+            )
+        ]
+
+        compliant = [
+            p
+            for p in policies
+            if p.get("EnableInternalSenderAdminNotifications") is True
+            and p.get("InternalSenderAdminAddress")
+        ]
+        if compliant:
+            names = ", ".join(p.get("Identity", "<unknown>") for p in compliant)
+            return self._pass(
+                "Internal sender malware admin notifications are enabled "
+                f"with a configured address on: {names}.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            "No malware filter policy has both "
+            "EnableInternalSenderAdminNotifications=True and a defined "
+            f"InternalSenderAdminAddress (checked {len(policies)} policy(ies)).",
+            evidence=evidence,
+        )

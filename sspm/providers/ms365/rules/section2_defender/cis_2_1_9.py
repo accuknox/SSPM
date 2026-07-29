@@ -104,8 +104,8 @@ class CIS_2_1_9(MS365Rule):
 
         # DKIM config is not available via Graph v1.0; we flag for manual follow-up
         # with available domain inventory.
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"Found {len(verified_custom)} custom domain(s): "
                 + ", ".join(d.get("id", "") for d in verified_custom)
                 + ". DKIM signing status must be verified via Exchange Online "

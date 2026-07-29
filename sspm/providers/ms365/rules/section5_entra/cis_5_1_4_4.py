@@ -47,7 +47,7 @@ class CIS_5_1_4_4(MS365Rule):
         audit_procedure=(
             "Using Microsoft Graph (beta):\n"
             "  GET /beta/policies/deviceRegistrationPolicy\n"
-            "  Check azureAdJoin.localAdmins.registeringUsers.localAdminType\n"
+            "  Check azureADJoin.localAdmins.registeringUsers.localAdminType\n"
             "  Compliant: localAdminType = 'None' or not set to 'Administrator'"
         ),
         remediation=(
@@ -80,7 +80,13 @@ class CIS_5_1_4_4(MS365Rule):
                 "Requires Policy.Read.All permission (beta)."
             )
 
-        azure_ad_join = device_reg_policy.get("azureAdJoin") or {}
+        # Graph property is "azureADJoin" (capital AD); a prior lowercase-"Ad"
+        # lookup here silently always missed the field, and the missing-field
+        # (None) case was incorrectly treated as compliant — a false-positive
+        # risk, since this control's own documented default is
+        # non-compliant ("Registering user is added as local administrator
+        # by default").
+        azure_ad_join = device_reg_policy.get("azureADJoin") or {}
         local_admins = azure_ad_join.get("localAdmins") or {}
         registering_users = local_admins.get("registeringUsers") or {}
         local_admin_type = registering_users.get("localAdminType")
@@ -89,26 +95,26 @@ class CIS_5_1_4_4(MS365Rule):
             Evidence(
                 source="graph/beta/policies/deviceRegistrationPolicy",
                 data={
-                    "azureAdJoin.localAdmins.registeringUsers.localAdminType": local_admin_type
+                    "azureADJoin.localAdmins.registeringUsers.localAdminType": local_admin_type
                 },
                 description="Device registration policy - registering user local admin setting.",
             )
         ]
 
-        if local_admin_type in (None, "none", "None", "disabled", "Disabled"):
+        if local_admin_type in ("none", "None", "disabled", "Disabled"):
             return self._pass(
                 "Registering users are not automatically added as local administrators "
                 f"(localAdminType = {local_admin_type}).",
                 evidence=evidence,
             )
 
-        if local_admin_type in ("administrator", "Administrator"):
+        if local_admin_type in ("administrator", "Administrator") or local_admin_type is None:
             return self._fail(
                 "Registering users are added as local administrators on Entra-joined "
-                f"devices (localAdminType = {local_admin_type}).",
+                f"devices by default (localAdminType = {local_admin_type}).",
                 evidence=evidence,
             )
 
-        return self._manual(
+        return self._skip(
             f"Local admin type is '{local_admin_type}'."
         )

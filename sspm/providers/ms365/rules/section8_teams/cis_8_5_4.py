@@ -1,5 +1,6 @@
 """
-CIS MS365 8.5.4 (L1) – Ensure dial-in users can't bypass the lobby (Manual)
+CIS MS365 8.5.4 (L1) – Ensure users dialing in can't bypass the lobby
+(Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -10,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -22,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_8_5_4(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.5.4",
-        title="Ensure dial-in users can't bypass the lobby",
+        title="Ensure users dialing in can't bypass the lobby",
         section="8.5 Teams Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.MEDIUM,
         description=(
@@ -39,13 +41,13 @@ class CIS_8_5_4(MS365Rule):
         ),
         impact="Dial-in callers must be admitted by a meeting organizer or presenter.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowPSTNUsersToBypassLobby\n\n"
-            "Compliant: AllowPSTNUsersToBypassLobby = False"
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+            "AllowPSTNUsersToBypassLobby\n\n"
+            "Ensure AllowPSTNUsersToBypassLobby is False."
         ),
         remediation=(
             "Microsoft Teams PowerShell:\n"
-            "  Set-CsTeamsMeetingPolicy -AllowPSTNUsersToBypassLobby $false"
+            "  Set-CsTeamsMeetingPolicy -Identity Global -AllowPSTNUsersToBypassLobby $false"
         ),
         default_value="Dial-in callers bypass lobby by default when organizer is in meeting.",
         references=[
@@ -65,4 +67,51 @@ class CIS_8_5_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._skip(
+                reason=(
+                    "Whether dial-in (PSTN) users can bypass the lobby requires "
+                    "the Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
+                    "with certificate app-only auth), which is not configured for "
+                    "this scan. Verify manually: Get-CsTeamsMeetingPolicy "
+                    "-Identity Global | fl AllowPSTNUsersToBypassLobby — ensure "
+                    "it is False."
+                )
+            )
+
+        value = policy.get("AllowPSTNUsersToBypassLobby")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowPSTNUsersToBypassLobby": value},
+                description="Whether dial-in (PSTN) callers can bypass the meeting lobby.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowPSTNUsersToBypassLobby is False.", evidence=evidence
+            )
+        if value is True:
+            return self._fail(
+                "AllowPSTNUsersToBypassLobby is True; dial-in callers can bypass "
+                "the lobby.",
+                evidence=evidence,
+            )
+        return self._skip(
+            reason=(
+                f"AllowPSTNUsersToBypassLobby has an unexpected value ({value!r}); "
+                "verify manually via Get-CsTeamsMeetingPolicy -Identity Global | "
+                "fl AllowPSTNUsersToBypassLobby."
+            )
+        )

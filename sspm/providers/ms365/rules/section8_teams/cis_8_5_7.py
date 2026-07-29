@@ -1,6 +1,6 @@
 """
-CIS MS365 8.5.7 (L1) – Ensure external participants cannot give or request
-control (Manual)
+CIS MS365 8.5.7 (L1) – Ensure external participants can't give or request
+control (Automated)
 
 Profile Applicability: E3 Level 1, E5 Level 1
 """
@@ -11,6 +11,7 @@ from sspm.core.models import (
     AssessmentStatus,
     CISControl,
     CISProfile,
+    Evidence,
     RuleMetadata,
     Severity,
 )
@@ -23,10 +24,10 @@ from sspm.providers.ms365.rules.base import MS365Rule
 class CIS_8_5_7(MS365Rule):
     metadata = RuleMetadata(
         id="ms365-cis-8.5.7",
-        title="Ensure external participants cannot give or request control",
+        title="Ensure external participants can't give or request control",
         section="8.5 Teams Meetings",
         benchmark="CIS Microsoft 365 Foundations Benchmark v6.0.1",
-        assessment_status=AssessmentStatus.MANUAL,
+        assessment_status=AssessmentStatus.AUTOMATED,
         profiles=[CISProfile.E3_L1, CISProfile.E5_L1],
         severity=Severity.HIGH,
         description=(
@@ -41,13 +42,14 @@ class CIS_8_5_7(MS365Rule):
         ),
         impact="External meeting participants will not be able to use remote control features.",
         audit_procedure=(
-            "Microsoft Teams PowerShell:\n"
-            "  Get-CsTeamsMeetingPolicy | Select-Object AllowExternalParticipantGiveRequestControl\n\n"
-            "Compliant: AllowExternalParticipantGiveRequestControl = False"
+            "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+            "AllowExternalParticipantGiveRequestControl\n\n"
+            "Ensure AllowExternalParticipantGiveRequestControl is False."
         ),
         remediation=(
             "Microsoft Teams PowerShell:\n"
-            "  Set-CsTeamsMeetingPolicy -AllowExternalParticipantGiveRequestControl $false"
+            "  Set-CsTeamsMeetingPolicy -Identity Global "
+            "-AllowExternalParticipantGiveRequestControl $false"
         ),
         default_value="External control may be allowed by default.",
         references=[
@@ -67,4 +69,54 @@ class CIS_8_5_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        return self._manual()
+        # Get-CsTeamsMeetingPolicy is a MicrosoftTeams Remote PowerShell
+        # cmdlet with no Microsoft Graph equivalent, so this collector (which
+        # only performs Graph client-credentials auth) cannot read it.
+        if "teams_meeting_policy" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve Teams meeting policy: "
+                f"{data.errors.get('teams_meeting_policy')}"
+            )
+
+        policy = data.get("teams_meeting_policy")
+        if policy is None:
+            return self._skip(
+                reason=(
+                    "Whether external participants can give or request control "
+                    "requires the Microsoft Teams PowerShell bridge "
+                    "(Connect-MicrosoftTeams with certificate app-only auth), "
+                    "which is not configured for this scan. Verify manually: "
+                    "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                    "AllowExternalParticipantGiveRequestControl — ensure it is "
+                    "False."
+                )
+            )
+
+        value = policy.get("AllowExternalParticipantGiveRequestControl")
+        evidence = [
+            Evidence(
+                source="teams/Get-CsTeamsMeetingPolicy",
+                data={"AllowExternalParticipantGiveRequestControl": value},
+                description="Whether external participants can give/request remote control.",
+            )
+        ]
+
+        if value is False:
+            return self._pass(
+                "AllowExternalParticipantGiveRequestControl is False.",
+                evidence=evidence,
+            )
+        if value is True:
+            return self._fail(
+                "AllowExternalParticipantGiveRequestControl is True; external "
+                "participants can give or request control.",
+                evidence=evidence,
+            )
+        return self._skip(
+            reason=(
+                "AllowExternalParticipantGiveRequestControl has an unexpected "
+                f"value ({value!r}); verify manually via "
+                "Get-CsTeamsMeetingPolicy -Identity Global | fl "
+                "AllowExternalParticipantGiveRequestControl."
+            )
+        )

@@ -45,8 +45,9 @@ class CIS_7_2_2(MS365Rule):
             "Entra B2B guest accounts."
         ),
         audit_procedure=(
-            "GET /admin/sharepoint/settings\n"
-            "Check: isManagedB2BEnabled = true (or equivalent B2B integration field)"
+            "Connect to SharePoint Online using Connect-SPOService, then:\n"
+            "  Get-SPOTenant | ft EnableAzureADB2BIntegration\n"
+            "Ensure the returned value is True."
         ),
         remediation=(
             "SharePoint admin center → Settings > External collaboration.\n"
@@ -70,21 +71,21 @@ class CIS_7_2_2(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip(
-                "Could not retrieve SharePoint settings. "
-                "Requires SharePoint Administrator role."
-            )
+        # EnableAzureADB2BIntegration has no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose it.
+        settings, skip = self._spo_tenant_or_skip(
+            data, "EnableAzureADB2BIntegration"
+        )
+        if skip is not None:
+            return skip
 
-        # Check B2B integration
-        b2b_enabled = settings.get("isManagedB2BEnabled") or settings.get("b2bEnabled")
+        b2b_enabled = settings.get("EnableAzureADB2BIntegration")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
-                data={"isManagedB2BEnabled": b2b_enabled},
-                description="SharePoint B2B integration setting.",
+                source="sharepoint/Get-SPOTenant",
+                data={"EnableAzureADB2BIntegration": b2b_enabled},
+                description="SharePoint/OneDrive Entra B2B integration setting.",
             )
         ]
 
@@ -94,11 +95,11 @@ class CIS_7_2_2(MS365Rule):
                 evidence=evidence,
             )
 
-        if b2b_enabled is False:
-            return self._fail(
-                "SharePoint/OneDrive Entra B2B integration is disabled. "
-                "External users are not governed through Entra ID.",
-                evidence=evidence,
-            )
-
-        return self._manual()
+        # Get-SPOTenant always returns the property; its documented default is
+        # False, so anything other than True is the non-compliant state.
+        return self._fail(
+            "SharePoint/OneDrive Entra B2B integration is disabled "
+            f"(EnableAzureADB2BIntegration = {b2b_enabled}). External users "
+            "are not governed through Entra ID.",
+            evidence=evidence,
+        )
