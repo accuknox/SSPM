@@ -81,7 +81,7 @@ class CIS_2_1_13(MS365Rule):
 
         policy = data.get("hosted_connection_filter_policy")
         if policy is None:
-            return self._manual(
+            return self._skip(
                 "The connection filter safe list setting requires the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured "

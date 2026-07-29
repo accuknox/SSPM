@@ -91,8 +91,8 @@ class CIS_8_5_1(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether anonymous users can join meetings requires the "
                     "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate or access-token app-only auth), which is "
@@ -123,8 +123,8 @@ class CIS_8_5_1(MS365Rule):
                 "are allowed to join Teams meetings.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"AllowAnonymousUsersToJoinMeeting has an unexpected value "
                 f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
                 "-Identity Global | fl AllowAnonymousUsersToJoinMeeting."

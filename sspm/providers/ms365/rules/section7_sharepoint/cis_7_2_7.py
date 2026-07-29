@@ -74,36 +74,48 @@ class CIS_7_2_7(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+        # DefaultSharingLinkType has no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose it.
+        settings, skip = self._spo_tenant_or_skip(data, "DefaultSharingLinkType")
+        if skip is not None:
+            return skip
 
-        default_link_type = settings.get("defaultSharingLinkType")
+        default_link_type = settings.get("DefaultSharingLinkType")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
-                data={"defaultSharingLinkType": default_link_type},
+                source="sharepoint/Get-SPOTenant",
+                data={"DefaultSharingLinkType": default_link_type},
                 description="SharePoint default sharing link type.",
             )
         ]
 
-        # 3 = Anonymous (Anyone with the link) = non-compliant
-        if default_link_type == 3:
-            return self._fail(
-                "Default sharing link type is 'Anyone with the link' (anonymous). "
-                "This should be changed to a more restrictive setting.",
-                evidence=evidence,
-            )
+        # SharingLinkType enum: None=0, Direct=1, Internal=2,
+        # AnonymousAccess=3. The script casts it to a string, but accept the
+        # integer form too in case a caller supplies raw ConvertTo-Json output.
+        names = {0: "None", 1: "Direct", 2: "Internal", 3: "AnonymousAccess"}
+        if isinstance(default_link_type, int) and not isinstance(default_link_type, bool):
+            link_type = names.get(default_link_type, str(default_link_type))
+        else:
+            link_type = str(default_link_type or "")
 
-        link_type_names = {0: "None (user choice)", 1: "Direct (specific people)", 2: "Internal (organization)"}
-        if default_link_type in link_type_names:
+        # CIS: "Ensure the returned value is Direct or Internal."
+        if link_type in ("Direct", "Internal"):
             return self._pass(
-                f"Default sharing link type is: {link_type_names[default_link_type]} "
-                f"(defaultSharingLinkType = {default_link_type})",
+                f"Default sharing link type is '{link_type}', which restricts "
+                "links to specific people or to the organization.",
                 evidence=evidence,
             )
 
-        return self._manual(
-            f"Default sharing link type is '{default_link_type}'."
+        if link_type == "AnonymousAccess":
+            return self._fail(
+                "Default sharing link type is 'AnonymousAccess' (Anyone with "
+                "the link), so shared files default to unauthenticated access.",
+                evidence=evidence,
+            )
+
+        return self._fail(
+            f"Default sharing link type is '{link_type or default_link_type}', "
+            "which is neither 'Direct' nor 'Internal' as CIS requires.",
+            evidence=evidence,
         )

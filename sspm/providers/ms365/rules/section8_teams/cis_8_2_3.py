@@ -89,8 +89,8 @@ class CIS_8_2_3(MS365Rule):
         fed_config = data.get("teams_tenant_federation_configuration")
 
         if ext_policy is None and fed_config is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether external Teams users can initiate conversations "
                     "requires the Microsoft Teams PowerShell bridge "
                     "(Connect-MicrosoftTeams with certificate app-only auth), "
@@ -133,8 +133,8 @@ class CIS_8_2_3(MS365Rule):
                 f"AllowTeamsConsumerInbound={fed_value!r}).",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "Could not determine whether external Teams users can initiate "
                 "conversations from the available data. Verify manually: "
                 "Get-CsExternalAccessPolicy -Identity Global | fl "

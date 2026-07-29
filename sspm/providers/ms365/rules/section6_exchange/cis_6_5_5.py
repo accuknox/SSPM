@@ -90,7 +90,7 @@ class CIS_6_5_5(MS365Rule):
 
         org_config = data.get("organization_config")
         if org_config is None:
-            return self._manual(
+            return self._skip(
                 "RejectDirectSend requires the Exchange Online PowerShell "
                 "bridge (Connect-ExchangeOnline with certificate app-only "
                 "auth), which is not configured for this scan. Verify "

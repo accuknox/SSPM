@@ -80,7 +80,7 @@ class CIS_6_2_3(MS365Rule):
 
         identities = data.get("external_in_outlook")
         if identities is None:
-            return self._manual(
+            return self._skip(
                 "External sender identification settings require the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured for "
@@ -90,7 +90,7 @@ class CIS_6_2_3(MS365Rule):
             )
 
         if not identities:
-            return self._manual(
+            return self._skip(
                 "Get-ExternalInOutlook returned no identities to evaluate; "
                 "verify manually."
             )

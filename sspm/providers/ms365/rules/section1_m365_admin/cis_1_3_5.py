@@ -85,8 +85,8 @@ class CIS_1_3_5(MS365Rule):
                     "Could not retrieve Microsoft Forms settings: "
                     f"{data.errors.get('forms_settings')}"
                 )
-            return self._manual(
-                message="Could not retrieve Microsoft Forms org settings."
+            return self._skip(
+                reason="Could not retrieve Microsoft Forms org settings."
             )
 
         enabled = settings.get("isInOrgFormsPhishingScanEnabled")

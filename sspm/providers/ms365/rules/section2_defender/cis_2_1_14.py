@@ -82,7 +82,7 @@ class CIS_2_1_14(MS365Rule):
 
         policies = data.get("hosted_content_filter_policy")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Inbound anti-spam allowed sender domains require the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured "

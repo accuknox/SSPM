@@ -78,8 +78,8 @@ class CIS_8_5_2(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether anonymous users and dial-in callers can start "
                     "meetings requires the Microsoft Teams PowerShell bridge "
                     "(Connect-MicrosoftTeams with certificate app-only auth), "
@@ -108,8 +108,8 @@ class CIS_8_5_2(MS365Rule):
                 "dial-in callers can start meetings.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"AllowAnonymousUsersToStartMeeting has an unexpected value "
                 f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
                 "-Identity Global | fl AllowAnonymousUsersToStartMeeting."

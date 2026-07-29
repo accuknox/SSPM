@@ -98,4 +98,7 @@ class CIS_7_3_2(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "SharePoint settings were retrieved but did not include "
+            f"isUnmanagedSyncAppForTenantRestricted (value: {sync_restricted!r})."
+        )

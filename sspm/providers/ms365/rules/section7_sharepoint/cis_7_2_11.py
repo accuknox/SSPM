@@ -71,34 +71,42 @@ class CIS_7_2_11(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+        # DefaultLinkPermission has no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose it.
+        settings, skip = self._spo_tenant_or_skip(data, "DefaultLinkPermission")
+        if skip is not None:
+            return skip
 
-        default_link_permission = settings.get("defaultLinkPermission")
+        default_link_permission = settings.get("DefaultLinkPermission")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
-                data={"defaultLinkPermission": default_link_permission},
+                source="sharepoint/Get-SPOTenant",
+                data={"DefaultLinkPermission": default_link_permission},
                 description="SharePoint default link permission setting.",
             )
         ]
 
-        # 1 = View, 2 = Edit
-        if default_link_permission == 1:
+        # SharingPermissionType enum: None=0, View=1, Edit=2. The script casts
+        # it to a string; accept the integer form too.
+        names = {0: "None", 1: "View", 2: "Edit"}
+        if isinstance(default_link_permission, int) and not isinstance(
+            default_link_permission, bool
+        ):
+            permission = names.get(
+                default_link_permission, str(default_link_permission)
+            )
+        else:
+            permission = str(default_link_permission or "")
+
+        if permission == "View":
             return self._pass(
-                "Default sharing link permission is 'View' (defaultLinkPermission = 1).",
+                "Default sharing link permission is 'View'.",
                 evidence=evidence,
             )
 
-        if default_link_permission == 2:
-            return self._fail(
-                "Default sharing link permission is 'Edit' (defaultLinkPermission = 2). "
-                "Should be set to 'View'.",
-                evidence=evidence,
-            )
-
-        return self._manual(
-            f"Default link permission is '{default_link_permission}'."
+        return self._fail(
+            f"Default sharing link permission is "
+            f"'{permission or default_link_permission}'; CIS requires 'View'.",
+            evidence=evidence,
         )

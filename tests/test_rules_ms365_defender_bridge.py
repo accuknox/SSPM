@@ -64,9 +64,9 @@ class TestCIS_1_3_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_1_3_3().check(_none("sharing_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -107,9 +107,9 @@ class TestCIS_1_3_6:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_1_3_6().check(_none("organization_config"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_enabled(self):
@@ -134,9 +134,9 @@ class TestCIS_1_3_9:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_1_3_9().check(_none("owa_mailbox_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_bookings_mailbox_creation_disabled(self):
@@ -190,9 +190,9 @@ class TestCIS_2_1_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_1().check(_none("safe_links_policies"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_compliant_policy_exists(self):
@@ -224,9 +224,9 @@ class TestCIS_2_1_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_2().check(_none("malware_filter_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_enabled(self):
@@ -255,9 +255,9 @@ class TestCIS_2_1_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_3().check(_none("malware_filter_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_configured(self):
@@ -298,9 +298,9 @@ class TestCIS_2_1_4:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_4().check(_none("safe_attachments_policies"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_compliant(self):
@@ -343,9 +343,9 @@ class TestCIS_2_1_5:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_5().check(_none("atp_policy_for_o365"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_compliant(self):
@@ -384,11 +384,11 @@ class TestCIS_2_1_6:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_6().check(
             _none("hosted_outbound_spam_filter_policy")
         )
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_configured(self):
@@ -443,9 +443,9 @@ class TestCIS_2_1_7:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_7().check(_none("anti_phishing_policies"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_custom_policy_compliant(self):
@@ -475,9 +475,9 @@ class TestCIS_2_1_11:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_11().check(_none("malware_filter_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_comprehensive(self):
@@ -520,11 +520,11 @@ class TestCIS_2_1_12:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_12().check(
             _none("hosted_connection_filter_policy")
         )
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_empty(self):
@@ -553,11 +553,11 @@ class TestCIS_2_1_13:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_13().check(
             _none("hosted_connection_filter_policy")
         )
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -582,9 +582,9 @@ class TestCIS_2_1_14:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_14().check(_none("hosted_content_filter_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_all_empty(self):
@@ -624,11 +624,11 @@ class TestCIS_2_1_15:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_1_15().check(
             _none("hosted_outbound_spam_filter_policy")
         )
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_within_limits(self):
@@ -669,9 +669,9 @@ class TestCIS_2_4_4:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_2_4_4().check(_none("teams_protection_policy"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_enabled(self):
@@ -700,9 +700,9 @@ class TestCIS_3_1_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_3_1_1().check(_none("admin_audit_log_config"))
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_enabled(self):

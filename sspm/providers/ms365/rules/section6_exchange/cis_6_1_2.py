@@ -119,7 +119,7 @@ class CIS_6_1_2(MS365Rule):
 
         mailboxes = data.get("mailbox_audit_settings")
         if mailboxes is None:
-            return self._manual(
+            return self._skip(
                 "Per-mailbox audit action configuration requires the Exchange "
                 "Online PowerShell bridge (Connect-ExchangeOnline with "
                 "certificate app-only auth), which is not configured for this "

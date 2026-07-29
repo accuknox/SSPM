@@ -32,7 +32,11 @@ import msal
 
 log = logging.getLogger(__name__)
 
-_GRAPH_SCOPE = ["https://graph.microsoft.com/.default"]
+_GRAPH_SCOPE = "https://graph.microsoft.com/.default"
+
+# Microsoft Fabric admin REST API (CIS section 9.1). Separate resource from
+# Graph, so it needs its own token — see MS365Collector._get_fabric_tenant_settings.
+FABRIC_SCOPE = "https://api.fabric.microsoft.com/.default"
 
 
 class MS365Auth:
@@ -54,13 +58,25 @@ class MS365Auth:
         self._token: str | None = None
 
     def get_token(self) -> str:
-        """Return a valid access token, acquiring a new one if necessary."""
-        result = self._app.acquire_token_for_client(scopes=_GRAPH_SCOPE)
+        """Return a valid Microsoft Graph access token, acquiring a new one if
+        necessary."""
+        self._token = self.get_token_for_scope(_GRAPH_SCOPE, "MS Graph")
+        return self._token
+
+    def get_token_for_scope(self, scope: str, label: str = "") -> str:
+        """Return an app-only access token for an arbitrary resource scope.
+
+        MSAL caches per-scope, so repeated calls are cheap. Used for resources
+        outside Microsoft Graph (e.g. the Fabric admin REST API), which need a
+        token issued for their own audience.
+        """
+        result = self._app.acquire_token_for_client(scopes=[scope])
         if "access_token" not in result:
             error = result.get("error_description", result.get("error", "unknown"))
-            raise RuntimeError(f"Failed to acquire MS Graph token: {error}")
-        self._token = result["access_token"]
-        return self._token
+            raise RuntimeError(
+                f"Failed to acquire {label or scope} token: {error}"
+            )
+        return result["access_token"]
 
     @property
     def bearer_header(self) -> dict[str, str]:

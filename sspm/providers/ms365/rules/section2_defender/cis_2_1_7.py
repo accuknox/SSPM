@@ -127,7 +127,7 @@ class CIS_2_1_7(MS365Rule):
 
         policies = data.get("anti_phishing_policies")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Anti-phishing policy configuration requires the Exchange "
                 "Online PowerShell bridge (Connect-ExchangeOnline with "
                 "certificate app-only auth), which is not configured for "

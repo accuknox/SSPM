@@ -89,6 +89,41 @@ class MS365Rule(BaseRule):
         )
 
     # ------------------------------------------------------------------
+    # SharePoint Online tenant settings (Get-SPOTenant shape)
+    # ------------------------------------------------------------------
+
+    def _spo_tenant_or_skip(
+        self, data: CollectedData, audit_hint: str
+    ) -> tuple[dict | None, Finding | None]:
+        """Return ``(settings, None)`` for Get-SPOTenant data, or
+        ``(None, skip_finding)`` when the SharePoint PowerShell bridge did not
+        supply it.
+
+        ``audit_hint`` names the property/properties to check by hand, and is
+        appended to the SKIPPED reason so the report stays actionable.
+
+        Connect-SPOService is the only PowerShell module in this collector
+        with no access-token auth path, so these properties are unavailable
+        unless a certificate is configured — unlike Exchange and Teams, which
+        work from the client secret alone.
+        """
+        errors = data.errors or {}
+        if "spo_tenant" in errors:
+            return None, self._skip(
+                f"Could not retrieve SharePoint tenant settings: {errors['spo_tenant']}"
+            )
+
+        settings = data.get("spo_tenant")
+        if settings is None:
+            return None, self._skip(
+                "This property is only exposed by SharePoint Online PowerShell, "
+                "which requires the certificate-based bridge "
+                "(--ms365-cert-path) that is not configured for this scan. "
+                f"Verify manually: Get-SPOTenant | fl {audit_hint}"
+            )
+        return settings, None
+
+    # ------------------------------------------------------------------
     # Shared utilities
     # ------------------------------------------------------------------
 

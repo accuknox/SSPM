@@ -81,7 +81,7 @@ class CIS_6_5_3(MS365Rule):
 
         owa_policy = data.get("owa_mailbox_policy")
         if owa_policy is None:
-            return self._manual(
+            return self._skip(
                 "The OWA mailbox policy requires the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. Verify "

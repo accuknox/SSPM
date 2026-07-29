@@ -93,7 +93,7 @@ class CIS_1_3_6(MS365Rule):
 
         org_config = data.get("organization_config")
         if org_config is None:
-            return self._manual(
+            return self._skip(
                 "CustomerLockBoxEnabled requires the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. "

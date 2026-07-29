@@ -76,11 +76,19 @@ class CIS_5_3_4(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
+        if "role_management_policies" in (data.errors or {}):
+            return self._skip(
+                "Could not retrieve PIM role management policies: "
+                f"{data.errors.get('role_management_policies')}"
+            )
+
         role_mgmt_policies = data.get("role_management_policies")
         if role_mgmt_policies is None:
             return self._skip(
-                "Could not retrieve role management policies. "
-                "Requires RoleManagement.Read.All permission."
+                "PIM role management policies were not collected. "
+                "Requires the RoleManagementPolicy.Read.Directory "
+                "permission and a Microsoft Entra ID P2 or Governance "
+                "licence."
             )
 
         if not role_mgmt_policies:
@@ -97,7 +105,10 @@ class CIS_5_3_4(MS365Rule):
                 break
 
         if ga_policy is None:
-            return self._manual()
+            return self._skip(
+                "No PIM role management policy for Global Administrator was "
+                "found among the collected policies."
+            )
 
         # Check for approval requirement in the rules
         rules = ga_policy.get("rules") or []

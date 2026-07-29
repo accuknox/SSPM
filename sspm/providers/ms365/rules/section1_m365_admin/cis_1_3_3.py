@@ -87,7 +87,7 @@ class CIS_1_3_3(MS365Rule):
 
         policy = data.get("sharing_policy")
         if policy is None:
-            return self._manual(
+            return self._skip(
                 "Calendar external sharing requires the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. "

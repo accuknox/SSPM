@@ -64,36 +64,49 @@ class CIS_7_2_9(MS365Rule):
         tags=["sharepoint", "guest-access", "expiration", "external-users"],
     )
 
-    async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+    # CIS: ExternalUserExpirationRequired True, ExternalUserExpireInDays <= 30.
+    MAX_EXPIRE_DAYS = 30
 
-        expiration_required = settings.get("externalUserExpirationRequired")
-        expire_days = settings.get("externalUserExpireInDays")
+    async def check(self, data: CollectedData):
+        # These properties have no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose them.
+        settings, skip = self._spo_tenant_or_skip(
+            data, "ExternalUserExpirationRequired,ExternalUserExpireInDays"
+        )
+        if skip is not None:
+            return skip
+
+        expiration_required = settings.get("ExternalUserExpirationRequired")
+        expire_days = settings.get("ExternalUserExpireInDays")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
+                source="sharepoint/Get-SPOTenant",
                 data={
-                    "externalUserExpirationRequired": expiration_required,
-                    "externalUserExpireInDays": expire_days,
+                    "ExternalUserExpirationRequired": expiration_required,
+                    "ExternalUserExpireInDays": expire_days,
                 },
                 description="Guest access expiration settings.",
             )
         ]
 
-        if expiration_required is True and expire_days and expire_days <= 180:
+        if expiration_required is not True:
+            return self._fail(
+                "Guest access does not expire automatically "
+                f"(ExternalUserExpirationRequired = {expiration_required}). "
+                "External users retain access indefinitely once granted.",
+                evidence=evidence,
+            )
+
+        if isinstance(expire_days, int) and expire_days <= self.MAX_EXPIRE_DAYS:
             return self._pass(
                 f"Guest access expires automatically after {expire_days} days.",
                 evidence=evidence,
             )
 
-        if expiration_required is False:
-            return self._fail(
-                "Guest access does not expire automatically. External users retain "
-                "access indefinitely once granted.",
-                evidence=evidence,
-            )
-
-        return self._manual()
+        return self._fail(
+            "Guest access expiration is enabled but set to "
+            f"{expire_days} days, which exceeds the CIS maximum of "
+            f"{self.MAX_EXPIRE_DAYS} days.",
+            evidence=evidence,
+        )

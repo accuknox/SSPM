@@ -82,7 +82,7 @@ class CIS_6_2_2(MS365Rule):
 
         rules = data.get("transport_rules")
         if rules is None:
-            return self._manual(
+            return self._skip(
                 "Exchange transport rules require the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. Verify "

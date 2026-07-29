@@ -87,18 +87,18 @@ class CIS_2_4_2(MS365Rule):
                 f"{data.errors.get('preset_security_policies')}"
             )
 
-        # Preset security policy assignment has no Microsoft Graph API or
-        # PowerShell cmdlet published by CIS at all; it is configured and
-        # audited solely through the Microsoft 365 Defender portal.
-        return self._manual(
-            message=(
-                "Strict Preset Security Policy assignment for priority "
-                "accounts has no Microsoft Graph API or PowerShell cmdlet "
-                "published by CIS — it must be verified manually in the "
-                "Microsoft 365 Defender portal: Email & Collaboration > "
-                "Policies & Rules > Threat policies > Preset security "
-                "policies, confirming each of Anti-phishing, Anti-spam, "
-                "Anti-malware, Safe Attachments, and Safe Links includes the "
-                "priority accounts/groups under the Strict preset."
-            )
+        # CIS labels this control Automated but publishes a UI-only audit
+        # procedure for it — there is no Microsoft Graph API or PowerShell
+        # cmdlet to read preset security policy assignment, so there is
+        # nothing to evaluate rather than a control CIS expects a human to
+        # judge.
+        return self._skip(
+            "Strict Preset Security Policy assignment for priority accounts "
+            "has no Microsoft Graph API or PowerShell cmdlet published by CIS, "
+            "so it cannot be collected. Verify in the Microsoft 365 Defender "
+            "portal: Email & Collaboration > Policies & Rules > Threat "
+            "policies > Preset security policies, confirming each of "
+            "Anti-phishing, Anti-spam, Anti-malware, Safe Attachments, and "
+            "Safe Links includes the priority accounts/groups under the Strict "
+            "preset."
         )

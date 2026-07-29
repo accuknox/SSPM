@@ -113,4 +113,7 @@ class CIS_5_1_4_3(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "The device registration policy does not report an "
+            f"enableGlobalAdmins value (value: {enable_global_admins!r})."
+        )

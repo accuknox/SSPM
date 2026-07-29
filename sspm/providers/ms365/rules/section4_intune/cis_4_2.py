@@ -96,7 +96,10 @@ class CIS_4_2(MS365Rule):
         ]
 
         if not restriction_configs:
-            return self._manual()
+            return self._skip(
+                "No device enrollment platform restriction or enrollment "
+                "limit configurations exist in this tenant."
+            )
 
         # Check if any restriction blocks personal devices
         blocks_personal = False

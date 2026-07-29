@@ -80,8 +80,8 @@ class CIS_8_2_4(MS365Rule):
 
         fed_config = data.get("teams_tenant_federation_configuration")
         if fed_config is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Communication with trial Teams tenants requires the "
                     "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate app-only auth), which is not configured "

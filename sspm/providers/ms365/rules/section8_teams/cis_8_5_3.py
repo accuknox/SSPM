@@ -79,8 +79,8 @@ class CIS_8_5_3(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Lobby bypass settings require the Microsoft Teams PowerShell "
                     "bridge (Connect-MicrosoftTeams with certificate app-only "
                     "auth), which is not configured for this scan. Verify "
@@ -119,8 +119,8 @@ class CIS_8_5_3(MS365Rule):
                 "InvitedUsers/organization members to bypass the lobby.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "AutoAdmittedUsers is missing/unexpected; verify manually via "
                 "Get-CsTeamsMeetingPolicy -Identity Global | fl AutoAdmittedUsers."
             )

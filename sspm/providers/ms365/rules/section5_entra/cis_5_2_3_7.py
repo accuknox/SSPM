@@ -87,7 +87,10 @@ class CIS_5_2_3_7(MS365Rule):
 
         if email_config is None:
             # Email OTP not found; might mean it's controlled differently
-            return self._manual()
+            return self._skip(
+                "The authentication methods policy contains no Email OTP "
+                "configuration, so its state could not be determined."
+            )
 
         state = email_config.get("state", "").lower()
 

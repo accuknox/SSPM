@@ -78,8 +78,8 @@ class CIS_8_5_4(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether dial-in (PSTN) users can bypass the lobby requires "
                     "the Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate app-only auth), which is not configured for "
@@ -108,8 +108,8 @@ class CIS_8_5_4(MS365Rule):
                 "the lobby.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"AllowPSTNUsersToBypassLobby has an unexpected value ({value!r}); "
                 "verify manually via Get-CsTeamsMeetingPolicy -Identity Global | "
                 "fl AllowPSTNUsersToBypassLobby."

@@ -98,6 +98,6 @@ class CIS_3_2_2(MS365Rule):
             )
 
         # We can't easily determine Teams coverage from the sensitivity labels endpoint
-        return self._manual(
+        return self._skip(
             f"DLP policies found ({len(dlp_policies)}) but Teams location coverage cannot be verified via Graph API."
         )

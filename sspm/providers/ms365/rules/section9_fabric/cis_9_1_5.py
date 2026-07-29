@@ -48,7 +48,8 @@ class CIS_9_1_5(MS365Rule):
             "Microsoft Fabric admin portal (app.powerbi.com/admin-portal):\n"
             "  Tenant settings > R and Python visuals settings.\n"
             "  Ensure 'Interact with and share R and Python visuals' is Disabled.\n\n"
-            "Via Fabric REST API (requires delegated Fabric.Admin.All auth):\n"
+            "Via the Fabric admin REST API (app-only; the tenant must enable\n"
+            "'Service principals can access read-only admin APIs'):\n"
             "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
             "  Locate settingName RScriptVisual. Pass if enabled=false."
         ),
@@ -84,14 +85,10 @@ class CIS_9_1_5(MS365Rule):
 
         setting = self._get_fabric_setting(data, self.SETTING_NAME)
         if setting is None:
-            return self._manual(
-                message=(
-                    "Microsoft Fabric tenant settings are not available "
-                    "(requires delegated Fabric.Admin.All authentication, not "
-                    "available via client-credentials Graph auth). Verify "
-                    f"manually: settingName {self.SETTING_NAME} in the Fabric "
-                    "admin portal > Tenant settings > R and Python visuals settings."
-                )
+            return self._skip(
+                "The Microsoft Fabric admin API did not return a "
+                f"{self.SETTING_NAME} setting for this tenant. Verify "
+                "manually in the Fabric admin portal > Tenant settings > R and Python visuals settings."
             )
 
         evidence = [

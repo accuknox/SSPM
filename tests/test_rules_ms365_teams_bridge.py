@@ -43,9 +43,9 @@ class TestCIS_8_1_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_1_1().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_all_providers_disabled(self):
@@ -62,12 +62,14 @@ class TestCIS_8_1_1:
         assert finding.status == FindingStatus.PASS
 
     @pytest.mark.asyncio
-    async def test_manual_when_some_provider_enabled(self):
-        # CIS allows organizationally-approved providers, so this cannot be
-        # an automatic FAIL — the rule requires manual review instead.
+    async def test_fail_when_some_provider_enabled(self):
+        # An organization that has formally approved a provider can accept the
+        # finding as an exception, but the enabled providers are still named.
         data = _data({
             "teams_client_configuration": {
-                "AllowDropbox": True,
+                # Get-CsTeamsClientConfiguration spells this AllowDropBox,
+                # unlike the AllowDropbox parameter in CIS's audit snippet.
+                "AllowDropBox": True,
                 "AllowBox": False,
                 "AllowGoogleDrive": False,
                 "AllowShareFile": False,
@@ -75,7 +77,8 @@ class TestCIS_8_1_1:
             }
         })
         finding = await CIS_8_1_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.FAIL
+        assert "AllowDropBox" in finding.message
 
 
 # ---------------------------------------------------------------------------
@@ -89,9 +92,9 @@ class TestCIS_8_1_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_1_2().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -123,9 +126,9 @@ class TestCIS_8_2_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_2_1().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_federation_access_disabled(self):
@@ -152,8 +155,7 @@ class TestCIS_8_2_1:
         assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
-    async def test_manual_when_allow_federated_users_true(self):
-        # AllowedDomains shape is ambiguous — must not guess.
+    async def test_pass_when_federation_limited_to_allowed_domains(self):
         data = _data({
             "teams_tenant_federation_configuration": {
                 "AllowFederatedUsers": True,
@@ -161,7 +163,43 @@ class TestCIS_8_2_1:
             },
         })
         finding = await CIS_8_2_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.PASS
+        assert "partner.com" in finding.message
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "allowed_domains",
+        [
+            pytest.param({}, id="empty-marker"),
+            pytest.param({"AllowAllKnownDomains": None}, id="allow-all-known"),
+            pytest.param(None, id="absent"),
+        ],
+    )
+    async def test_fail_when_federation_is_unrestricted(self, allowed_domains):
+        # An empty AllowedDomains, or the AllowAllKnownDomains marker, means
+        # every known external domain is reachable.
+        data = _data({
+            "teams_tenant_federation_configuration": {
+                "AllowFederatedUsers": True,
+                "AllowedDomains": allowed_domains,
+            },
+        })
+        finding = await CIS_8_2_1().check(data)
+        assert finding.status == FindingStatus.FAIL
+
+    @pytest.mark.asyncio
+    async def test_pass_when_allowed_domains_is_a_plain_list(self):
+        # ConvertTo-Json can render the domain list without the wrapper key.
+        data = _data({
+            "teams_tenant_federation_configuration": {
+                "AllowFederatedUsers": True,
+                "AllowedDomains": [{"Domain": "partner.com"}, "vendor.com"],
+            },
+        })
+        finding = await CIS_8_2_1().check(data)
+        assert finding.status == FindingStatus.PASS
+        assert "partner.com" in finding.message
+        assert "vendor.com" in finding.message
 
 
 # ---------------------------------------------------------------------------
@@ -175,9 +213,9 @@ class TestCIS_8_2_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_2_2().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -216,9 +254,9 @@ class TestCIS_8_2_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_2_3().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -248,9 +286,9 @@ class TestCIS_8_2_4:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_2_4().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_blocked(self):
@@ -296,9 +334,9 @@ class TestBooleanMeetingPolicyRules:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rule_cls,prop", BOOLEAN_MEETING_POLICY_RULES)
-    async def test_manual_when_none(self, rule_cls, prop):
+    async def test_skipped_when_none(self, rule_cls, prop):
         finding = await rule_cls().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rule_cls,prop", BOOLEAN_MEETING_POLICY_RULES)
@@ -316,10 +354,10 @@ class TestBooleanMeetingPolicyRules:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rule_cls,prop", BOOLEAN_MEETING_POLICY_RULES)
-    async def test_manual_when_unexpected_value(self, rule_cls, prop):
+    async def test_skipped_when_unexpected_value(self, rule_cls, prop):
         data = _data({"teams_meeting_policy": {prop: "Weird"}})
         finding = await rule_cls().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 # ---------------------------------------------------------------------------
@@ -333,9 +371,9 @@ class TestCIS_8_5_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_5_3().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -365,9 +403,9 @@ class TestCIS_8_5_5:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_5_5().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -401,9 +439,9 @@ class TestCIS_8_5_6:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_none(self):
+    async def test_skipped_when_none(self):
         finding = await CIS_8_5_6().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_organizer_only(self):
@@ -456,21 +494,21 @@ class TestCIS_8_6_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_both_none(self):
+    async def test_skipped_when_both_none(self):
         finding = await CIS_8_6_1().check(_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_only_teams_present(self):
+    async def test_skipped_when_only_teams_present(self):
         data = _data({"teams_messaging_policy": self.COMPLIANT_MESSAGING_POLICY})
         finding = await CIS_8_6_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_only_report_policy_present(self):
+    async def test_skipped_when_only_report_policy_present(self):
         data = _data({"report_submission_policy": self.COMPLIANT_REPORT_POLICY})
         finding = await CIS_8_6_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_fully_compliant(self):

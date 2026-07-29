@@ -83,7 +83,7 @@ class CIS_6_1_3(MS365Rule):
 
         bypass_accounts = data.get("mailbox_audit_bypass_association")
         if bypass_accounts is None:
-            return self._manual(
+            return self._skip(
                 "Mailbox audit bypass associations require the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. Verify "

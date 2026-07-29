@@ -83,21 +83,20 @@ class CIS_8_1_1(MS365Rule):
 
         config = data.get("teams_client_configuration")
         if config is None:
-            return self._manual(
-                message=(
-                    "Approved cloud storage providers for Teams file sharing "
-                    "requires the Microsoft Teams PowerShell bridge "
-                    "(Connect-MicrosoftTeams with certificate app-only auth), "
-                    "which is not configured for this scan. Verify manually: "
-                    "Get-CsTeamsClientConfiguration -Identity Global | fl "
-                    "AllowDropbox, AllowBox, AllowGoogleDrive, AllowShareFile, "
-                    "AllowEgnyte — ensure only organizationally-approved providers "
-                    "are True."
-                )
+            return self._skip(
+                "Approved cloud storage providers for Teams file sharing "
+                "require the Microsoft Teams PowerShell bridge "
+                "(Connect-MicrosoftTeams), which is not configured for this "
+                "scan. Verify manually: Get-CsTeamsClientConfiguration "
+                "-Identity Global | fl AllowDropBox, AllowBox, "
+                "AllowGoogleDrive, AllowShareFile, AllowEgnyte — ensure only "
+                "organizationally-approved providers are True."
             )
 
+        # Get-CsTeamsClientConfiguration returns AllowDropBox with a capital
+        # B, unlike the AllowDropbox parameter name in CIS's audit snippet.
         providers = {
-            "AllowDropbox": config.get("AllowDropbox"),
+            "AllowDropBox": config.get("AllowDropBox", config.get("AllowDropbox")),
             "AllowBox": config.get("AllowBox"),
             "AllowGoogleDrive": config.get("AllowGoogleDrive"),
             "AllowShareFile": config.get("AllowShareFile"),
@@ -123,16 +122,18 @@ class CIS_8_1_1(MS365Rule):
                 evidence=evidence,
             )
 
-        # CIS's own audit procedure only requires that "organizationally
-        # approved" providers be True — which providers are approved is a
-        # business decision this data cannot answer, so a non-empty enabled
-        # set is left for manual review rather than an automatic FAIL that
-        # could wrongly flag a legitimately-approved provider.
-        return self._manual(
-            message=(
-                "The following third-party storage providers are enabled for "
-                f"Teams file sharing: {', '.join(enabled)}. Verify each is "
-                "organizationally-approved; disable any that are not via "
-                "Set-CsTeamsClientConfiguration -Identity Global."
-            )
+        # Which providers count as "organizationally approved" is a business
+        # decision this data cannot answer. CIS's default value is all five
+        # True and its remediation example disables all of them, so an enabled
+        # provider is reported as a failure; an organization that has formally
+        # approved one can accept it as a documented exception.
+        return self._fail(
+            "Third-party cloud storage providers are enabled for Teams file "
+            f"sharing: {', '.join(enabled)}. Disable any that are not "
+            "organizationally approved.",
+            evidence=evidence,
+            remediation_guidance=(
+                "Set-CsTeamsClientConfiguration -Identity Global "
+                + " ".join(f"-{name} $false" for name in enabled)
+            ),
         )

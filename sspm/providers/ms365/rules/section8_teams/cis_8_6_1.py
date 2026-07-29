@@ -101,8 +101,8 @@ class CIS_8_6_1(MS365Rule):
         report_policies = data.get("report_submission_policy")
 
         if messaging_policy is None and report_policies is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Security concern reporting requires BOTH the Microsoft "
                     "Teams PowerShell bridge (Connect-MicrosoftTeams) and the "
                     "Exchange Online PowerShell bridge (Connect-ExchangeOnline), "
@@ -126,8 +126,8 @@ class CIS_8_6_1(MS365Rule):
                 if messaging_policy is None
                 else "Exchange Online (Connect-ExchangeOnline)"
             )
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     f"Only partial data is available — the {missing_bridge} "
                     "PowerShell bridge is not configured for this scan — so this "
                     "control cannot be fully evaluated. Verify manually: "

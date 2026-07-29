@@ -71,9 +71,12 @@ class TestGroupRestrictFabricRules:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("rule_cls,setting_name", GROUP_RESTRICT_RULES)
-    async def test_manual_when_no_fabric_data(self, rule_cls, setting_name):
+    async def test_skipped_when_no_fabric_data(self, rule_cls, setting_name):
+        # CIS classifies section 9.1 as Automated, so an uncollectable Fabric
+        # admin API is "not evaluated" (SKIPPED), never MANUAL.
         finding = await rule_cls().check(_no_data())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
+        assert finding.message
 
 
 class TestCIS_9_1_4:

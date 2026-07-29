@@ -67,16 +67,20 @@ class CIS_7_3_1(MS365Rule):
     )
 
     async def check(self, data: CollectedData):
-        settings = data.get("sharepoint_settings")
-        if settings is None:
-            return self._skip("Could not retrieve SharePoint settings.")
+        # DisallowInfectedFileDownload has no Microsoft Graph equivalent —
+        # /admin/sharepoint/settings does not expose it.
+        settings, skip = self._spo_tenant_or_skip(
+            data, "DisallowInfectedFileDownload"
+        )
+        if skip is not None:
+            return skip
 
-        disallow_infected = settings.get("disallowInfectedFileDownload")
+        disallow_infected = settings.get("DisallowInfectedFileDownload")
 
         evidence = [
             Evidence(
-                source="graph/admin/sharepoint/settings",
-                data={"disallowInfectedFileDownload": disallow_infected},
+                source="sharepoint/Get-SPOTenant",
+                data={"DisallowInfectedFileDownload": disallow_infected},
                 description="SharePoint infected file download restriction.",
             )
         ]
@@ -84,15 +88,12 @@ class CIS_7_3_1(MS365Rule):
         if disallow_infected is True:
             return self._pass(
                 "Infected file downloads are blocked in SharePoint "
-                "(disallowInfectedFileDownload = true).",
+                "(DisallowInfectedFileDownload = True).",
                 evidence=evidence,
             )
 
-        if disallow_infected is False:
-            return self._fail(
-                "Infected file downloads are allowed in SharePoint "
-                "(disallowInfectedFileDownload = false).",
-                evidence=evidence,
-            )
-
-        return self._manual()
+        return self._fail(
+            "Infected file downloads are allowed in SharePoint "
+            f"(DisallowInfectedFileDownload = {disallow_infected}).",
+            evidence=evidence,
+        )

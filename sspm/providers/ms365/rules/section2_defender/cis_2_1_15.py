@@ -96,7 +96,7 @@ class CIS_2_1_15(MS365Rule):
 
         policy = data.get("hosted_outbound_spam_filter_policy")
         if policy is None:
-            return self._manual(
+            return self._skip(
                 "Outbound anti-spam recipient limits require the Exchange "
                 "Online PowerShell bridge (Connect-ExchangeOnline with "
                 "certificate app-only auth), which is not configured for "

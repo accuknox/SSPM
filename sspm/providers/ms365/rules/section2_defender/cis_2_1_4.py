@@ -90,7 +90,7 @@ class CIS_2_1_4(MS365Rule):
 
         policies = data.get("safe_attachments_policies")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Safe Attachments policy configuration requires the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured "

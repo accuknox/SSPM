@@ -87,7 +87,7 @@ class CIS_2_1_3(MS365Rule):
 
         policies = data.get("malware_filter_policy")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Internal sender malware notification settings require the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured "

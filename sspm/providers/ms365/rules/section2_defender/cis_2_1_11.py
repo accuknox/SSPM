@@ -90,7 +90,7 @@ class CIS_2_1_11(MS365Rule):
 
         policies = data.get("malware_filter_policy")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Comprehensive attachment filtering requires the Exchange "
                 "Online PowerShell bridge (Connect-ExchangeOnline with "
                 "certificate app-only auth), which is not configured for "

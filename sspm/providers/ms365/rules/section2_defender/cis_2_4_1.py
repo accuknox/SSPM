@@ -86,17 +86,15 @@ class CIS_2_4_1(MS365Rule):
                 f"{data.errors.get('priority_account_protection')}"
             )
 
-        # Priority account protection has no Microsoft Graph or PowerShell
-        # cmdlet published by CIS at all; it is configured and audited solely
-        # through the Microsoft 365 Defender portal.
-        return self._manual(
-            message=(
-                "Priority account protection has no Microsoft Graph API or "
-                "PowerShell cmdlet published by CIS — it must be verified "
-                "manually in the Microsoft 365 Defender portal: Settings > "
-                "Email & collaboration > Priority account protection (confirm "
-                "it is turned on), User tags (confirm priority accounts are "
-                "tagged), and Alert policies (confirm priority-account alerts "
-                "are enabled)."
-            )
+        # CIS labels this control Automated but publishes a UI-only audit
+        # procedure for it — there is no Microsoft Graph API or PowerShell
+        # cmdlet to read priority account protection, so there is nothing to
+        # evaluate rather than a control CIS expects a human to judge.
+        return self._skip(
+            "Priority account protection has no Microsoft Graph API or "
+            "PowerShell cmdlet published by CIS, so it cannot be collected. "
+            "Verify in the Microsoft 365 Defender portal: Settings > Email & "
+            "collaboration > Priority account protection (confirm it is turned "
+            "on), User tags (confirm priority accounts are tagged), and Alert "
+            "policies (confirm priority-account alerts are enabled)."
         )

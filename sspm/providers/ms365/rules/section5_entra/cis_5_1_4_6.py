@@ -117,4 +117,8 @@ class CIS_5_1_4_6(MS365Rule):
                 "(allowedToReadBitlockerKeysForOwnedDevice = true).",
                 evidence=evidence,
             )
-        return self._manual()
+        return self._skip(
+            "The device registration policy does not report an "
+            "allowedToReadBitlockerKeysForOwnedDevice value (value: "
+            f"{can_read_bitlocker_keys!r})."
+        )

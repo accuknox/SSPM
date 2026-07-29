@@ -89,8 +89,8 @@ class CIS_8_2_2(MS365Rule):
         fed_config = data.get("teams_tenant_federation_configuration")
 
         if ext_policy is None and fed_config is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Unmanaged (consumer) Teams communication settings require "
                     "the Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate app-only auth), which is not configured for "
@@ -132,8 +132,8 @@ class CIS_8_2_2(MS365Rule):
                 f"AllowTeamsConsumer={fed_value!r}).",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "Could not determine unmanaged Teams communication status from "
                 "the available data. Verify manually: Get-CsExternalAccessPolicy "
                 "-Identity Global | fl EnableTeamsConsumerAccess, OR "

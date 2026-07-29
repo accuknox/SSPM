@@ -50,7 +50,8 @@ class CIS_9_1_4(MS365Rule):
             "  Ensure 'Publish to web' is Disabled, or Enabled with 'Choose how "
             "embed codes work' set to 'Only allow existing codes' AND specific "
             "security groups selected.\n\n"
-            "Via Fabric REST API (requires delegated Fabric.Admin.All auth):\n"
+            "Via the Fabric admin REST API (app-only; the tenant must enable\n"
+            "'Service principals can access read-only admin APIs'):\n"
             "  GET https://api.fabric.microsoft.com/v1/admin/tenantsettings\n"
             "  Locate settingName PublishToWebPublishToWeb.\n"
             "  Pass if enabled=false, or enabled=true AND properties.createP2w=false "
@@ -88,14 +89,10 @@ class CIS_9_1_4(MS365Rule):
 
         setting = self._get_fabric_setting(data, self.SETTING_NAME)
         if setting is None:
-            return self._manual(
-                message=(
-                    "Microsoft Fabric tenant settings are not available "
-                    "(requires delegated Fabric.Admin.All authentication, not "
-                    "available via client-credentials Graph auth). Verify "
-                    f"manually: settingName {self.SETTING_NAME} in the Fabric "
-                    "admin portal > Tenant settings > Export and sharing settings."
-                )
+            return self._skip(
+                "The Microsoft Fabric admin API did not return a "
+                f"{self.SETTING_NAME} setting for this tenant. Verify "
+                "manually in the Fabric admin portal > Tenant settings > Export and sharing settings."
             )
 
         create_p2w = str(

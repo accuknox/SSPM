@@ -98,16 +98,23 @@ class CIS_5_1_6_1(MS365Rule):
 
         domains_policy = data.get("b2b_invitation_domains_policy")
         if domains_policy is None:
-            # CIS's own audit script does not declare a verdict when no
-            # B2BManagementPolicy object exists ("No policy found.") —
-            # matching that, we require manual review rather than guessing.
-            return self._manual(
-                message=(
-                    "No B2B invitation allow/block domain list policy is "
-                    "configured for this tenant. Verify manually in Microsoft "
-                    "Entra admin center > External Identities > External "
-                    "collaboration settings."
-                )
+            # CIS's audit script prints "No policy found." without declaring a
+            # verdict, but the control's stated Default Value is "Allow
+            # invitations to be sent to any domain (most inclusive)" — the
+            # absence of a B2BManagementPolicy *is* that unrestricted default.
+            return self._fail(
+                "No B2B invitation domain policy is configured, so the tenant "
+                "is at its default of allowing collaboration invitations to be "
+                "sent to any domain.",
+                evidence=[
+                    Evidence(
+                        source="graph/beta/legacy/policies (B2BManagementPolicy)",
+                        data={"B2BManagementPolicy": None},
+                        description=(
+                            "No B2BManagementPolicy object exists for this tenant."
+                        ),
+                    )
+                ],
             )
 
         evidence = [
@@ -130,9 +137,9 @@ class CIS_5_1_6_1(MS365Rule):
                 "AllowedDomains policy.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
-                "B2B invitation domains policy exists but has neither "
-                "AllowedDomains nor BlockedDomains defined; verify manually."
-            )
+        return self._fail(
+            "The B2B invitation domains policy defines neither AllowedDomains "
+            "nor BlockedDomains, so invitations are not restricted to approved "
+            "domains.",
+            evidence=evidence,
         )

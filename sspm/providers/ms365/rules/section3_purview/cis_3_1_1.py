@@ -99,7 +99,7 @@ class CIS_3_1_1(MS365Rule):
 
         config = data.get("admin_audit_log_config")
         if config is None:
-            return self._manual(
+            return self._skip(
                 "UnifiedAuditLogIngestionEnabled requires the Exchange "
                 "Online PowerShell bridge (Connect-ExchangeOnline with "
                 "certificate app-only auth), which is not configured for "

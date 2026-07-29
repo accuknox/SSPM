@@ -115,6 +115,6 @@ class CIS_5_1_4_4(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
+        return self._skip(
             f"Local admin type is '{local_admin_type}'."
         )

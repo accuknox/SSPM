@@ -102,4 +102,7 @@ class CIS_7_2_1(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual()
+        return self._skip(
+            "SharePoint settings were retrieved but did not include "
+            f"isLegacyAuthProtocolsEnabled (value: {legacy_auth_enabled!r})."
+        )

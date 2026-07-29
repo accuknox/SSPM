@@ -128,6 +128,6 @@ class CIS_5_2_3_6(MS365Rule):
                 evidence=evidence,
             )
 
-        return self._manual(
+        return self._skip(
             f"System-preferred MFA state is '{state}'."
         )

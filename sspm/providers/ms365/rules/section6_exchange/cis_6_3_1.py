@@ -91,7 +91,7 @@ class CIS_6_3_1(MS365Rule):
 
         policies = data.get("role_assignment_policies")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Role assignment policies require the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. Verify "

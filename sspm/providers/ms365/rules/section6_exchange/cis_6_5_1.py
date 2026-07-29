@@ -81,7 +81,7 @@ class CIS_6_5_1(MS365Rule):
 
         org_config = data.get("organization_config")
         if org_config is None:
-            return self._manual(
+            return self._skip(
                 "OAuth2ClientProfileEnabled requires the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "or access-token app-only auth), which is not configured "

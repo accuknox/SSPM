@@ -85,7 +85,7 @@ class CIS_2_4_4(MS365Rule):
 
         policies = data.get("teams_protection_policy")
         if policies is None:
-            return self._manual(
+            return self._skip(
                 "Zero-hour auto purge for Microsoft Teams requires the "
                 "Exchange Online PowerShell bridge (Connect-ExchangeOnline "
                 "with certificate app-only auth), which is not configured "

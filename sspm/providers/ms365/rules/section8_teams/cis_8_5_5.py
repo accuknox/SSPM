@@ -80,8 +80,8 @@ class CIS_8_5_5(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether anonymous users can use meeting chat requires the "
                     "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate app-only auth), which is not configured "
@@ -118,8 +118,8 @@ class CIS_8_5_5(MS365Rule):
                 "users to use meeting chat.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "MeetingChatEnabledType is missing/unexpected; verify manually "
                 "via Get-CsTeamsMeetingPolicy -Identity Global | fl "
                 "MeetingChatEnabledType."

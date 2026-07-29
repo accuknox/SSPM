@@ -77,8 +77,8 @@ class CIS_8_5_9(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether cloud recording is off by default requires the "
                     "Microsoft Teams PowerShell bridge (Connect-MicrosoftTeams "
                     "with certificate app-only auth), which is not configured "
@@ -107,8 +107,8 @@ class CIS_8_5_9(MS365Rule):
                 "default.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"AllowCloudRecording has an unexpected value ({value!r}); "
                 "verify manually via Get-CsTeamsMeetingPolicy -Identity Global "
                 "| fl AllowCloudRecording."

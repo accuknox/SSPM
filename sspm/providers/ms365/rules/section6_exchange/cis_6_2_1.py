@@ -101,7 +101,7 @@ class CIS_6_2_1(MS365Rule):
 
         spam_policy = data.get("hosted_outbound_spam_filter_policy")
         if spam_policy is None:
-            return self._manual(
+            return self._skip(
                 "Mail-forwarding controls require the Exchange Online "
                 "PowerShell bridge (Connect-ExchangeOnline with certificate "
                 "app-only auth), which is not configured for this scan. Verify "

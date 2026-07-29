@@ -104,6 +104,6 @@ class CIS_4_1(MS365Rule):
         # We cannot directly check the "default compliance" setting from this endpoint
         # The actual setting requires GET /deviceManagement/settings
         # Provide a partial check with manual guidance
-        return self._manual(
+        return self._skip(
             f"{len(compliance_policies)} compliance policy/policies found. Default compliance setting requires manual verification."
         )

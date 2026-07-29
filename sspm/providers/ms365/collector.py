@@ -38,7 +38,8 @@ Graph API:
     "pim_role_assignments"          – active + eligible PIM role assignments
     "role_management_policies"      – PIM role management policies
     "access_reviews"                – Identity Governance access review definitions
-    "fabric_tenant_settings"        – Microsoft Fabric (no Graph API → None)
+    "fabric_tenant_settings"        – Microsoft Fabric tenant settings, from
+                                       the Fabric admin REST API (not Graph)
     "password_protection_settings"  – Entra Password Protection group setting
                                        (banned password lists, on-prem AD mode)
     "forms_settings"                – Microsoft Forms org settings (beta)
@@ -65,8 +66,10 @@ _TEAMS_KEYS): "teams_client_configuration", "teams_external_access_policy",
 "teams_tenant_federation_configuration", "teams_meeting_policy",
 "teams_messaging_policy".
 
-SharePoint Online (scripts/sharepoint.ps1, via Connect-SPOService):
-plumbing only for now, no collector keys wired yet.
+SharePoint Online (scripts/sharepoint.ps1, via Connect-SPOService — see
+_SHAREPOINT_KEYS): "spo_tenant" (the Get-SPOTenant properties CIS section 7
+audits that /admin/sharepoint/settings does not expose). Requires a
+certificate: Connect-SPOService has no access-token auth path.
 
 When no PowerShellBridge/PowerShellConfig is supplied to the collector (the
 default), every Exchange/Teams key above is ``None`` — identical to this
@@ -84,7 +87,7 @@ from typing import Any
 import httpx
 
 from sspm.providers.base import CollectedData
-from sspm.providers.ms365.auth import MS365Auth
+from sspm.providers.ms365.auth import FABRIC_SCOPE, MS365Auth
 from sspm.providers.ms365.powershell_bridge import (
     EXO_TOKEN_SCOPE,
     GRAPH_TOKEN_SCOPE,
@@ -98,6 +101,7 @@ log = logging.getLogger(__name__)
 
 _GRAPH = "https://graph.microsoft.com/v1.0"
 _GRAPH_BETA = "https://graph.microsoft.com/beta"
+_FABRIC_API = "https://api.fabric.microsoft.com/v1"
 
 # Keys collected by scripts/exchange.ps1 (Connect-ExchangeOnline).
 _EXCHANGE_KEYS = [
@@ -132,9 +136,8 @@ _TEAMS_KEYS = [
     "teams_messaging_policy",
 ]
 
-# scripts/sharepoint.ps1 (Connect-SPOService) is plumbing-only for now — no
-# collector key is wired to it yet (see the script's own TODO for why).
-_SHAREPOINT_KEYS: list[str] = []
+# Keys collected by scripts/sharepoint.ps1 (Connect-SPOService).
+_SHAREPOINT_KEYS = ["spo_tenant"]
 
 
 class MS365Collector:
@@ -341,13 +344,25 @@ class MS365Collector:
         await self._safe_collect_batch(_TEAMS_KEYS, "teams.ps1", args, env_extra)
 
     async def _collect_sharepoint_via_powershell(self) -> None:
-        # Plumbing only: no keys are wired to scripts/sharepoint.ps1 yet
-        # (see that script's own TODO). Nothing to run or store for now.
-        if not self._ps_ready("sharepoint"):
+        # Unlike Exchange and Teams, SharePoint Online Management Shell has no
+        # access-token auth path — Connect-SPOService needs the certificate.
+        # Without one there is nothing to run, so the keys stay None and the
+        # rules SKIP.
+        cfg = self._ps_config
+        if not self._ps_ready("sharepoint") or not (cfg and cfg.cert_path):
+            for key in _SHAREPOINT_KEYS:
+                self._store(key, None)
             return
-        # Intentionally not invoked yet — _SHAREPOINT_KEYS is empty, so
-        # there is nothing for a script run to populate.
-        return
+
+        args = [
+            "-AppId", cfg.app_id,
+            "-TenantId", cfg.tenant_id,
+            "-CertificatePath", cfg.cert_path,
+            "-AdminUrl", cfg.sharepoint_admin_url,
+        ]
+        await self._safe_collect_batch(
+            _SHAREPOINT_KEYS, "sharepoint.ps1", args, self._cert_env_extra()
+        )
 
     # ------------------------------------------------------------------
     # Collection methods
@@ -629,11 +644,26 @@ class MS365Collector:
 
     async def _get_role_management_policies(self):
         # PIM role management policies (activation rules, approval requirements).
-        # Requires RoleManagementPolicy.Read.Directory permission.
-        return await self._get(
-            f"{_GRAPH}/policies/roleManagementPolicies",
-            params={"$filter": "scopeType eq 'directoryRole'"},
-        )
+        # Requires RoleManagementPolicy.Read.Directory permission *and* a
+        # Microsoft Entra ID P2 / Governance licence — without the licence the
+        # endpoint answers 400 with an opaque "MissingProvider" body, so
+        # translate it into the actual cause for the report.
+        try:
+            return await self._get(
+                f"{_GRAPH}/policies/roleManagementPolicies",
+                params={"$filter": "scopeType eq 'directoryRole'"},
+            )
+        except httpx.HTTPStatusError as exc:
+            body = exc.response.text
+            if exc.response.status_code == 400 and (
+                "MissingProvider" in body or "AadPremiumLicenseRequired" in body
+            ):
+                raise RuntimeError(
+                    "Privileged Identity Management is not provisioned in this "
+                    "tenant. It requires a Microsoft Entra ID P2 or Microsoft "
+                    "Entra ID Governance licence."
+                ) from exc
+            raise
 
     async def _get_access_reviews(self):
         # Identity Governance access review definitions.
@@ -691,10 +721,25 @@ class MS365Collector:
         return result
 
     async def _get_fabric_tenant_settings(self):
-        # Fabric tenant settings are not available through Microsoft Graph.
-        # They are exposed by the dedicated Fabric REST API:
+        # Fabric tenant settings are not available through Microsoft Graph;
+        # they are exposed by the dedicated Fabric admin REST API:
         #   GET https://api.fabric.microsoft.com/v1/admin/tenantsettings
-        # That API requires a delegated token (Fabric.Admin.All scope) which
-        # cannot be obtained with client-credentials flow alone.
-        # Return None so rules produce a MANUAL finding instead of an error.
-        return None
+        # That resource needs its own token audience, and it only accepts a
+        # service principal when the tenant has enabled "Service principals
+        # can access read-only admin APIs" and added this app to the allowed
+        # security group. Without that it answers 401/403 — recorded as a
+        # collection error so the section 9.1 rules SKIP with the reason.
+        token = self._auth.get_token_for_scope(FABRIC_SCOPE, "Microsoft Fabric")
+        resp = await self._client.get(
+            f"{_FABRIC_API}/admin/tenantsettings",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        if resp.status_code in (401, 403):
+            raise RuntimeError(
+                f"HTTP {resp.status_code} from the Fabric admin API. Enable "
+                "'Service principals can access read-only admin APIs' in the "
+                "Fabric admin portal (Tenant settings > Developer settings) "
+                "and add this app registration to the allowed security group."
+            )
+        resp.raise_for_status()
+        return resp.json()

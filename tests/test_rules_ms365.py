@@ -323,10 +323,10 @@ class TestCIS_1_3_5:
         assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self, rule):
+    async def test_skipped_when_no_data(self, rule):
         data = _collected()
         finding = await rule.check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 # ---------------------------------------------------------------------------
@@ -490,9 +490,9 @@ class TestCIS_5_2_4_1:
 
 class TestCIS_6_1_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_1_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collection_error(self):
@@ -508,65 +508,65 @@ class TestCIS_6_1_1:
 
 class TestCIS_6_1_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_1_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_1_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_1_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_2_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_2_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_2_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_2_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_3_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_3_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_5_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_5_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_5_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_5_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_5_4:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_5_4().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_6_5_5:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_6_5_5().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 # ---------------------------------------------------------------------------
@@ -579,9 +579,9 @@ class TestCIS_6_5_5:
 
 class TestCIS_1_3_9:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_1_3_9().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -597,16 +597,16 @@ class TestCIS_1_3_9:
 
 class TestCIS_2_1_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -622,23 +622,23 @@ class TestCIS_2_1_2:
 
 class TestCIS_2_1_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_4:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_4().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_5:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_5().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -654,9 +654,9 @@ class TestCIS_2_1_5:
 
 class TestCIS_2_1_6:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_6().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -672,23 +672,23 @@ class TestCIS_2_1_6:
 
 class TestCIS_2_1_7:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_7().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_11:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_11().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_12:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_12().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -704,16 +704,16 @@ class TestCIS_2_1_12:
 
 class TestCIS_2_1_13:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_13().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_1_14:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_14().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -729,16 +729,16 @@ class TestCIS_2_1_14:
 
 class TestCIS_2_1_15:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_1_15().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_2_4_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_4_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -754,9 +754,9 @@ class TestCIS_2_4_1:
 
 class TestCIS_2_4_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_4_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -772,9 +772,9 @@ class TestCIS_2_4_2:
 
 class TestCIS_2_4_4:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_2_4_4().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skipped_on_collector_error(self):
@@ -796,107 +796,107 @@ class TestCIS_2_4_4:
 
 class TestCIS_8_1_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_1_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_1_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_1_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_2_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_2_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_2_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_2_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_2_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_2_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_2_4:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_2_4().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_2:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_2().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_4:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_4().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_5:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_5().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_6:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_6().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_7:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_7().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_8:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_8().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_5_9:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_5_9().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 class TestCIS_8_6_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_8_6_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
 
 # ---------------------------------------------------------------------------
@@ -908,9 +908,9 @@ class TestCIS_8_6_1:
 
 class TestCIS_1_3_3:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_1_3_3().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skip_on_collection_error(self):
@@ -926,9 +926,9 @@ class TestCIS_1_3_3:
 
 class TestCIS_1_3_6:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_1_3_6().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skip_on_collection_error(self):
@@ -944,9 +944,9 @@ class TestCIS_1_3_6:
 
 class TestCIS_3_1_1:
     @pytest.mark.asyncio
-    async def test_manual_when_no_data(self):
+    async def test_skipped_when_no_data(self):
         finding = await CIS_3_1_1().check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_skip_on_collection_error(self):
@@ -1122,9 +1122,12 @@ class TestCIS_5_1_6_1:
         assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
-    async def test_manual_when_no_policy_configured(self, rule):
+    async def test_fail_when_no_policy_configured(self, rule):
+        # The control's stated Default Value is "Allow invitations to be sent
+        # to any domain (most inclusive)", and the absence of a
+        # B2BManagementPolicy is exactly that unrestricted default.
         finding = await rule.check(_collected())
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
     async def test_skip_on_collection_error(self, rule):
@@ -1193,11 +1196,11 @@ class TestCIS_5_2_3_6:
         assert finding.status == FindingStatus.FAIL
 
     @pytest.mark.asyncio
-    async def test_manual_when_state_unrecognized(self, rule):
+    async def test_skipped_when_state_unrecognized(self, rule):
         data = _collected(
             authentication_methods_policy={
                 "systemCredentialPreferences": {"state": "somethingElse"}
             }
         )
         finding = await rule.check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED

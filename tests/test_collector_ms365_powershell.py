@@ -9,7 +9,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from sspm.providers.ms365.collector import _EXCHANGE_KEYS, _TEAMS_KEYS, MS365Collector
+from sspm.providers.ms365.collector import (
+    _EXCHANGE_KEYS,
+    _SHAREPOINT_KEYS,
+    _TEAMS_KEYS,
+    MS365Collector,
+)
 from sspm.providers.ms365.powershell_bridge import PowerShellConfig, PowerShellResult
 
 
@@ -139,3 +144,70 @@ class TestBridgeConfigured:
 
         _, kwargs = fake_bridge.run_script.call_args
         assert kwargs["env_extra"] == {"SSPM_MS365_CERT_PASSWORD": "super-secret"}
+
+
+class TestSharePointBridge:
+    """Connect-SPOService is the one module with no access-token auth path."""
+
+    async def test_keys_are_none_without_bridge(self):
+        collector = _make_collector()
+        await collector._collect_sharepoint_via_powershell()
+        for key in _SHAREPOINT_KEYS:
+            assert collector._data[key] is None
+        assert collector._errors == {}
+
+    async def test_client_secret_alone_does_not_run_the_script(self):
+        # Exchange and Teams work from the secret alone; SharePoint cannot,
+        # and must not leave the script waiting on a mandatory -CertificatePath.
+        fake_bridge = AsyncMock()
+        fake_bridge.available = True
+        config = PowerShellConfig(
+            app_id="app", tenant_id="tenant", client_secret="s3cret",
+            sharepoint_admin_url="https://contoso-admin.sharepoint.com",
+        )
+        collector = _make_collector(ps_bridge=fake_bridge, ps_config=config)
+
+        await collector._collect_sharepoint_via_powershell()
+
+        fake_bridge.run_script.assert_not_called()
+        for key in _SHAREPOINT_KEYS:
+            assert collector._data[key] is None
+
+    async def test_collects_spo_tenant_with_a_certificate(self):
+        fake_bridge = AsyncMock()
+        fake_bridge.available = True
+        fake_bridge.run_script.return_value = PowerShellResult(
+            ok=True,
+            data={"result": {"spo_tenant": {"DefaultLinkPermission": "View"}}, "errors": {}},
+        )
+        config = PowerShellConfig(
+            app_id="app", tenant_id="tenant", cert_path="/cert.pfx",
+            sharepoint_admin_url="https://contoso-admin.sharepoint.com",
+        )
+        collector = _make_collector(ps_bridge=fake_bridge, ps_config=config)
+
+        await collector._collect_sharepoint_via_powershell()
+
+        args, _ = fake_bridge.run_script.call_args
+        assert "-AdminUrl" in args[1]
+        assert "https://contoso-admin.sharepoint.com" in args[1]
+        assert collector._data["spo_tenant"] == {"DefaultLinkPermission": "View"}
+        assert collector._errors == {}
+
+    async def test_script_failure_errors_every_key(self):
+        fake_bridge = AsyncMock()
+        fake_bridge.available = True
+        fake_bridge.run_script.return_value = PowerShellResult(
+            ok=False, error="Connect-SPOService failed"
+        )
+        config = PowerShellConfig(
+            app_id="app", tenant_id="tenant", cert_path="/cert.pfx",
+            sharepoint_admin_url="https://contoso-admin.sharepoint.com",
+        )
+        collector = _make_collector(ps_bridge=fake_bridge, ps_config=config)
+
+        await collector._collect_sharepoint_via_powershell()
+
+        for key in _SHAREPOINT_KEYS:
+            assert collector._errors[key] == "Connect-SPOService failed"
+            assert key not in collector._data

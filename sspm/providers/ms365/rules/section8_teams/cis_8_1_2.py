@@ -79,8 +79,8 @@ class CIS_8_1_2(MS365Rule):
 
         config = data.get("teams_client_configuration")
         if config is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Channel email integration requires the Microsoft Teams "
                     "PowerShell bridge (Connect-MicrosoftTeams with certificate "
                     "app-only auth), which is not configured for this scan. "
@@ -108,8 +108,8 @@ class CIS_8_1_2(MS365Rule):
                 "channel email address.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 f"AllowEmailIntoChannel has an unexpected value ({value!r}); "
                 "verify manually via Get-CsTeamsClientConfiguration -Identity "
                 "Global | fl AllowEmailIntoChannel."

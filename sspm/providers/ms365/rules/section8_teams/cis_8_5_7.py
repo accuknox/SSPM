@@ -80,8 +80,8 @@ class CIS_8_5_7(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether external participants can give or request control "
                     "requires the Microsoft Teams PowerShell bridge "
                     "(Connect-MicrosoftTeams with certificate app-only auth), "
@@ -112,8 +112,8 @@ class CIS_8_5_7(MS365Rule):
                 "participants can give or request control.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "AllowExternalParticipantGiveRequestControl has an unexpected "
                 f"value ({value!r}); verify manually via "
                 "Get-CsTeamsMeetingPolicy -Identity Global | fl "

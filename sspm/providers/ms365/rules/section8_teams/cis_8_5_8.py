@@ -79,8 +79,8 @@ class CIS_8_5_8(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Whether external (non-trusted) meeting chat is enabled "
                     "requires the Microsoft Teams PowerShell bridge "
                     "(Connect-MicrosoftTeams with certificate app-only auth), "
@@ -109,8 +109,8 @@ class CIS_8_5_8(MS365Rule):
                 "participants can use meeting chat.",
                 evidence=evidence,
             )
-        return self._manual(
-            message=(
+        return self._skip(
+            reason=(
                 "AllowExternalNonTrustedMeetingChat has an unexpected value "
                 f"({value!r}); verify manually via Get-CsTeamsMeetingPolicy "
                 "-Identity Global | fl AllowExternalNonTrustedMeetingChat."

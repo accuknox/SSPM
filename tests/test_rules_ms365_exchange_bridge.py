@@ -45,10 +45,10 @@ class TestCIS_6_1_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(organization_config=None)
         finding = await CIS_6_1_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_audit_enabled(self):
@@ -104,10 +104,10 @@ class TestCIS_6_1_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(mailbox_audit_settings=None)
         finding = await CIS_6_1_2().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_fully_configured(self):
@@ -144,10 +144,10 @@ class TestCIS_6_1_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(mailbox_audit_bypass_association=None)
         finding = await CIS_6_1_3().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_empty(self):
@@ -178,10 +178,10 @@ class TestCIS_6_2_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(hosted_outbound_spam_filter_policy=None)
         finding = await CIS_6_2_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_off_and_no_forwarding_rules(self):
@@ -223,10 +223,10 @@ class TestCIS_6_2_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(transport_rules=None)
         finding = await CIS_6_2_2().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_no_whitelist_rules(self):
@@ -257,10 +257,10 @@ class TestCIS_6_2_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(external_in_outlook=None)
         finding = await CIS_6_2_3().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_enabled(self):
@@ -285,10 +285,10 @@ class TestCIS_6_3_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(role_assignment_policies=None)
         finding = await CIS_6_3_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_no_addin_roles(self):
@@ -324,10 +324,10 @@ class TestCIS_6_5_1:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(organization_config=None)
         finding = await CIS_6_5_1().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_modern_auth_enabled(self):
@@ -352,10 +352,10 @@ class TestCIS_6_5_2:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(organization_config=None)
         finding = await CIS_6_5_2().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_all_enabled(self):
@@ -394,10 +394,10 @@ class TestCIS_6_5_3:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(owa_mailbox_policy=None)
         finding = await CIS_6_5_3().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_false(self):
@@ -422,10 +422,10 @@ class TestCIS_6_5_4:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(transport_config=None)
         finding = await CIS_6_5_4().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_disabled(self):
@@ -450,10 +450,10 @@ class TestCIS_6_5_5:
         assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
-    async def test_manual_when_not_configured(self):
+    async def test_skipped_when_not_configured(self):
         data = _data(organization_config=None)
         finding = await CIS_6_5_5().check(data)
-        assert finding.status == FindingStatus.MANUAL
+        assert finding.status == FindingStatus.SKIPPED
 
     @pytest.mark.asyncio
     async def test_pass_when_true(self):

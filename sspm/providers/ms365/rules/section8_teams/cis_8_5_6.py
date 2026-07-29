@@ -80,8 +80,8 @@ class CIS_8_5_6(MS365Rule):
 
         policy = data.get("teams_meeting_policy")
         if policy is None:
-            return self._manual(
-                message=(
+            return self._skip(
+                reason=(
                     "Presenter role restrictions require the Microsoft Teams "
                     "PowerShell bridge (Connect-MicrosoftTeams with certificate "
                     "app-only auth), which is not configured for this scan. "
